@@ -21,6 +21,7 @@ kubectl create secret generic litellm-secret \
   --from-literal=POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" \
   --from-literal=UI_USERNAME="admin" \
   --from-literal=UI_PASSWORD="CHANGE-ME" \
+  --from-literal=HF_TOKEN="hf_..." \
   --dry-run=client -o yaml > secrets.yaml
 ```
 
@@ -28,6 +29,10 @@ kubectl create secret generic litellm-secret \
 ```bash
 kubectl apply -f secrets.yaml
 ```
+
+## Hugging Face token (gated models)
+
+The HF token is stored in the same `litellm-secret` used by the deployments.
 
 ## Better: Use External Secrets
 

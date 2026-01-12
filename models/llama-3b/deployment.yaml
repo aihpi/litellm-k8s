@@ -24,6 +24,12 @@ spec:
             - "8000"
           ports:
             - containerPort: 8000
+          env:
+            - name: HUGGING_FACE_HUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: litellm-secret
+                  key: HF_TOKEN
           resources:
             limits:
               nvidia.com/gpu: "1"
