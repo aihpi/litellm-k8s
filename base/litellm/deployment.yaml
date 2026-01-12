@@ -39,6 +39,11 @@ spec:
                 secretKeyRef:
                   name: litellm-secret
                   key: DATABASE_URL
+            - name: LITELLM_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: litellm-secret
+                  key: DATABASE_URL
             - name: UI_PATH
               valueFrom:
                 configMapKeyRef:
