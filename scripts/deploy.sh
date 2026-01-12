@@ -6,6 +6,9 @@ ENV=${1:-dev}
 echo "Deploying LiteLLM to ${ENV} environment..."
 
 kubectl apply -f namespaces/litellm.yaml
+if [ -f "secrets/secrets.yaml" ]; then
+  kubectl apply -f secrets/secrets.yaml -n litellm
+fi
 kubectl apply -k base/
 
 echo "Waiting for PostgreSQL..."
