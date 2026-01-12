@@ -14,6 +14,8 @@ spec:
       labels:
         app: llama-3b
     spec:
+      nodeSelector:
+        nvidia.com/gpu.product: NVIDIA-A30
       containers:
         - name: vllm
           image: vllm/vllm-openai:latest
