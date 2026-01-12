@@ -9,6 +9,6 @@ data:
     model_list:
       - model_name: llama-3b
         litellm_params:
-          model: llama-3b
+          model: hosted_vllm/llama-3b
           api_base: http://llama-3b-service:8000/v1
           api_key: dummy
