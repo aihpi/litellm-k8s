@@ -41,7 +41,7 @@ See docs/adding-models.md
 
 ## Infrastructure
 
-- Cluster: HPI K8s (64x H100, 40x A30)
+- Cluster: HPI K8s (40x A30)
 - Namespace: litellm
 - GPU Scheduling: Uses GPU requests in model deployments
 
