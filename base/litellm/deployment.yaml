@@ -18,7 +18,7 @@ spec:
         - name: litellm
           image: ghcr.io/berriai/litellm:main
           command: ["litellm"]
-          args: ["--config", "/etc/litellm/config.yaml", "--port", "4000"]
+          args: ["--config", "/etc/litellm/config.yaml", "--port", "4000", "--database_url", "$(LITELLM_DATABASE_URL)"]
           ports:
             - containerPort: 4000
           env:
