@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: llama-3b-service
+  labels:
+    app: llama-3b
+spec:
+  type: ClusterIP
+  selector:
+    app: llama-3b
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000

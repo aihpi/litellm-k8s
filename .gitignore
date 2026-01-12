@@ -1,0 +1,27 @@
+# Secrets - NEVER commit these!
+secrets/*.yaml
+secrets/*.yml
+!secrets/.gitkeep
+!secrets/README.md
+!secrets/example-secrets.yaml
+*.secret.yaml
+*-secret.yaml
+
+# Kubeconfig
+kubeconfig
+*.kubeconfig
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Temporary files
+*.tmp
+*.swp
+*~
+
+# IDE
+.vscode/
+.idea/
+*.iml

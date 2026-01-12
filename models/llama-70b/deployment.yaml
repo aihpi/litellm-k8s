@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llama-70b
+  labels:
+    app: llama-70b
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: llama-70b
+  template:
+    metadata:
+      labels:
+        app: llama-70b
+    spec:
+      containers:
+        - name: vllm
+          image: vllm/vllm-openai:latest
+          args:
+            - "--model"
+            - "meta-llama/Meta-Llama-3-70B-Instruct"
+            - "--port"
+            - "8000"
+          ports:
+            - containerPort: 8000
+          resources:
+            limits:
+              nvidia.com/gpu: "4"
