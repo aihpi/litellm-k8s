@@ -5,3 +5,15 @@ metadata:
 data:
   LITELLM_LOG: info
   UI_PATH: /ui
+  config.yaml: |
+    model_list:
+      - model_name: llama-3b
+        litellm_params:
+          model: openai/llama-3b
+          api_base: http://llama-3b-service:8000/v1
+          api_key: dummy
+      - model_name: llama-70b
+        litellm_params:
+          model: openai/llama-70b
+          api_base: http://llama-70b-service:8000/v1
+          api_key: dummy

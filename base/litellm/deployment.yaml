@@ -28,6 +28,8 @@ spec:
                 secretKeyRef:
                   name: litellm-secret
                   key: LITELLM_MASTER_KEY
+            - name: LITELLM_CONFIG
+              value: /etc/litellm/config.yaml
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
@@ -43,3 +45,11 @@ spec:
                 secretKeyRef:
                   name: litellm-secret
                   key: UI_PASSWORD
+          volumeMounts:
+            - name: litellm-config
+              mountPath: /etc/litellm/config.yaml
+              subPath: config.yaml
+      volumes:
+        - name: litellm-config
+          configMap:
+            name: litellm-config

@@ -8,8 +8,8 @@ resources:
   - ../../models
   - ingress.yaml
 
-patchesStrategicMerge:
-  - patches/litellm-prod.yaml
+patches:
+  - path: patches/litellm-prod.yaml
 
 replicas:
   - name: litellm-proxy

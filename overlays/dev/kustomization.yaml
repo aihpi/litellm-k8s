@@ -7,8 +7,8 @@ resources:
   - ../../base
   - ../../models
 
-patchesStrategicMerge:
-  - patches/litellm-dev.yaml
+patches:
+  - path: patches/litellm-dev.yaml
 
 replicas:
   - name: litellm-proxy
