@@ -1,6 +1,6 @@
 # LiteLLM Kubernetes Deployment
 
-AI model gateway for HPI MOOC "Chatbots leicht gemacht"
+AI model gateway
 
 ## Quick Start
 
