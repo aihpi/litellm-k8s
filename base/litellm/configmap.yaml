@@ -15,5 +15,5 @@ data:
       - model_name: qwen-image-edit
         litellm_params:
           model: openai/qwen-image-edit
-          api_base: http://qwen-image-edit:8000
+          api_base: http://qwen-image-edit:8000/v1
           api_key: dummy
