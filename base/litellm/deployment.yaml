@@ -29,6 +29,8 @@ spec:
                   key: LITELLM_MASTER_KEY
             - name: LITELLM_CONFIG
               value: /etc/litellm/config.yaml
+            - name: STORE_MODEL_IN_DB
+              value: "True"
             - name: LITELLM_LOG
               valueFrom:
                 configMapKeyRef:
