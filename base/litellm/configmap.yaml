@@ -12,3 +12,8 @@ data:
           model: openai/llama-3b
           api_base: http://llama-3b-service:8000/v1
           api_key: dummy
+      - model_name: qwen-image-edit
+        litellm_params:
+          model: openai/qwen-image-edit
+          api_base: http://qwen-image-edit:8000
+          api_key: dummy
