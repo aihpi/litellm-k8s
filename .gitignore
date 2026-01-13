@@ -25,3 +25,8 @@ kubeconfig
 .vscode/
 .idea/
 *.iml
+
+# Local artifacts
+.DS_Store
+test_image.jpg
+scripts/test_image_edit.py

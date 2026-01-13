@@ -6,5 +6,3 @@ namespace: litellm
 resources:
   - llama-3b/deployment.yaml
   - llama-3b/service.yaml
-  - llama-70b/deployment.yaml
-  - llama-70b/service.yaml

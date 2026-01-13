@@ -20,7 +20,7 @@ cp secrets/example-secrets.yaml secrets/secrets.yaml
 kubectl port-forward -n litellm service/litellm-service 4000:4000
 
 # 5. Access UI
-open http://localhost:4000/ui
+open http://localhost:4000/ui/login/
 ```
 
 ## Architecture
@@ -50,6 +50,12 @@ See docs/adding-models.md
 - Logs: kubectl logs -n litellm deployment/litellm-proxy -f
 - Restart: kubectl rollout restart -n litellm deployment/litellm-proxy
 - Scale: kubectl scale -n litellm deployment/llama-3b --replicas=2
+
+## UI Login
+
+Default credentials:
+- Username: admin
+- Password: your LITELLM_MASTER_KEY
 
 ## Contributors
 
