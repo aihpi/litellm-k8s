@@ -22,6 +22,8 @@ kubectl create secret generic litellm-secret \
   --from-literal=UI_USERNAME="admin" \
   --from-literal=UI_PASSWORD="CHANGE-ME" \
   --from-literal=HF_TOKEN="hf_..." \
+  --from-literal=LDAP_BIND_DN="CN=bind-user,OU=Users,DC=example,DC=org" \
+  --from-literal=LDAP_BIND_PASSWORD="CHANGE-ME" \
   --dry-run=client -o yaml > secrets.yaml
 ```
 
@@ -33,6 +35,10 @@ kubectl apply -f secrets.yaml
 ## Hugging Face token (gated models)
 
 The HF token is stored in the same `litellm-secret` used by the deployments.
+
+## LDAP bind credentials
+
+LDAP bind DN and password should be stored in `litellm-secret` and never committed.
 
 ## Better: Use External Secrets
 
