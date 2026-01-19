@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: octen-embedding-8b
+  labels:
+    app: octen-embedding-8b
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: octen-embedding-8b
+  template:
+    metadata:
+      labels:
+        app: octen-embedding-8b
+    spec:
+      containers:
+        - name: vllm
+          image: vllm/vllm-openai:latest
+          args:
+            - "--model"
+            - "Octen/Octen-Embedding-8B"
+            - "--served-model-name"
+            - "octen-embedding-8b"
+            - "--max-model-len"
+            - "40960"
+            - "--port"
+            - "8000"
+          ports:
+            - containerPort: 8000
+          env:
+            - name: HUGGING_FACE_HUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: litellm-secret
+                  key: HF_TOKEN
+          resources:
+            limits:
+              nvidia.com/gpu: "1"

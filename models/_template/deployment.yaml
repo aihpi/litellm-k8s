@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: MODEL_NAME
+  labels:
+    app: MODEL_NAME
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: MODEL_NAME
+  template:
+    metadata:
+      labels:
+        app: MODEL_NAME
+    spec:
+      nodeSelector:
+        nvidia.com/gpu.product: GPU_PRODUCT
+      containers:
+        - name: vllm
+          image: vllm/vllm-openai:latest
+          args:
+            - "--model"
+            - "MODEL_ID"
+            - "--served-model-name"
+            - "MODEL_NAME"
+            - "--max-model-len"
+            - "MAX_MODEL_LEN"
+            - "--port"
+            - "PORT"
+          ports:
+            - containerPort: PORT
+          env:
+            - name: HUGGING_FACE_HUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: litellm-secret
+                  key: HF_TOKEN
+          resources:
+            limits:
+              nvidia.com/gpu: "GPU_COUNT"
