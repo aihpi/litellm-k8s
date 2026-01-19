@@ -16,7 +16,7 @@ jobs:
 
       - name: Validate manifests
         run: |
-          find . -name "*.yaml" -type f | xargs kubeval --ignore-missing-schemas
+          find base overlays models namespaces secrets -name "*.yaml" -type f | xargs kubeval --ignore-missing-schemas
 
       - name: Install kustomize
         run: |
