@@ -14,3 +14,7 @@ patches:
 replicas:
   - name: litellm-proxy
     count: 3
+
+images:
+  - name: ghcr.io/aihpi/litellm
+    newTag: aihpi-provider
