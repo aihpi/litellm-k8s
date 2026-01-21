@@ -6,6 +6,8 @@ namespace: litellm
 resources:
   - ../../base
   - ../../models
+  - litellm-dev-deployment.yaml
+  - litellm-dev-service.yaml
 
 patches:
   - path: patches/litellm-dev.yaml
@@ -13,3 +15,9 @@ patches:
 replicas:
   - name: litellm-proxy
     count: 1
+  - name: litellm-proxy-dev
+    count: 1
+
+images:
+  - name: ghcr.io/aihpi/litellm
+    newTag: dev-qdrant-ui
