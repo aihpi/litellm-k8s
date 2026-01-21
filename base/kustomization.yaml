@@ -10,3 +10,5 @@ resources:
   - litellm/configmap.yaml
   - litellm/deployment.yaml
   - litellm/service.yaml
+  - qdrant/deployment.yaml
+  - qdrant/service.yaml
