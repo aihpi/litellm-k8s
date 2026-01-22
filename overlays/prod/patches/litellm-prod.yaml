@@ -5,6 +5,8 @@ metadata:
 spec:
   template:
     spec:
+      nodeSelector:
+        node-type: cpu
       containers:
         - name: litellm
           resources:
