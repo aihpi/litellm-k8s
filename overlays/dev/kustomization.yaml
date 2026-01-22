@@ -16,4 +16,4 @@ replicas:
 
 images:
   - name: ghcr.io/aihpi/litellm
-    newTag: dev-qdrant-ui
+    newTag: dev
