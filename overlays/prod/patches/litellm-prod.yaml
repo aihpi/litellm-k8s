@@ -16,7 +16,7 @@ spec:
         - name: litellm
           readinessProbe:
             httpGet:
-              path: /litellm-asset-prefix/.well-known/litellm-ui-config
+              path: /litellm/.well-known/litellm-ui-config
               port: 4000
             initialDelaySeconds: 5
             periodSeconds: 5
