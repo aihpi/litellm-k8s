@@ -3,12 +3,25 @@ kind: Deployment
 metadata:
   name: litellm-proxy
 spec:
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   template:
     spec:
       nodeSelector:
         node-type: cpu
       containers:
         - name: litellm
+          readinessProbe:
+            httpGet:
+              path: /litellm-asset-prefix/.well-known/litellm-ui-config
+              port: 4000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 6
           env:
             - name: LITELLM_ASSET_PREFIX
               value: /litellm-asset-prefix
