@@ -35,7 +35,7 @@ spec:
             - name: LITELLM_LOG
               valueFrom:
                 configMapKeyRef:
-                  name: litellm-config
+                  name: litellm-config-dev
                   key: LITELLM_LOG
             - name: DATABASE_URL
               valueFrom:
@@ -50,7 +50,7 @@ spec:
             - name: UI_PATH
               valueFrom:
                 configMapKeyRef:
-                  name: litellm-config
+                  name: litellm-config-dev
                   key: UI_PATH
             - name: UI_USERNAME
               valueFrom:
@@ -69,4 +69,4 @@ spec:
       volumes:
         - name: litellm-config
           configMap:
-            name: litellm-config
+            name: litellm-config-dev

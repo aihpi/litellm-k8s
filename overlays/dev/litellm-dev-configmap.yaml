@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: litellm-config-dev
+data:
+  LITELLM_LOG: debug
+  UI_PATH: /ui
+  config.yaml: |
+    model_list:
+      - model_name: llama-3b
+        litellm_params:
+          model: openai/llama-3b
+          api_base: http://llama-3b-service:8000/v1
+          api_key: dummy
+      - model_name: qwen-image-edit
+        litellm_params:
+          model: aihpi-provider/qwen-image-edit
+          api_base: http://qwen-image-edit:8000/v1
+          api_key: dummy

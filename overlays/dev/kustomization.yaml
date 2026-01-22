@@ -4,17 +4,13 @@ kind: Kustomization
 namespace: litellm
 
 resources:
-  - ../../base
+  - ../../base-infra
   - ../../models
   - litellm-dev-deployment.yaml
   - litellm-dev-service.yaml
-
-patches:
-  - path: patches/litellm-dev.yaml
+  - litellm-dev-configmap.yaml
 
 replicas:
-  - name: litellm-proxy
-    count: 1
   - name: litellm-proxy-dev
     count: 1
 
