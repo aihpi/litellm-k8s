@@ -9,6 +9,9 @@ spec:
         node-type: cpu
       containers:
         - name: litellm
+          env:
+            - name: LITELLM_ASSET_PREFIX
+              value: /litellm-asset-prefix
           resources:
             requests:
               cpu: "500m"

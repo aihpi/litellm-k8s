@@ -25,6 +25,8 @@ spec:
           ports:
             - containerPort: 4000
           env:
+            - name: LITELLM_ASSET_PREFIX
+              value: /litellm-asset-prefix
             - name: LITELLM_MASTER_KEY
               valueFrom:
                 secretKeyRef:
