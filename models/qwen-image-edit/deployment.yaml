@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qwen-image-edit
+  namespace: litellm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: qwen-image-edit
+  template:
+    metadata:
+      labels:
+        app: qwen-image-edit
+    spec:
+      nodeSelector:
+        accelerator: h100
+      initContainers:
+        - name: model-downloader
+          image: ghcr.io/aihpi/recreate-goods-edit-api:latest
+          command: ["python3", "download_model.py"]
+          env:
+            - name: MODEL_NAME
+              value: "Qwen/Qwen-Image-Edit"
+            - name: HF_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: litellm-secret
+                  key: HF_TOKEN
+                  optional: true
+          volumeMounts:
+            - name: model-storage
+              mountPath: /app/model
+      containers:
+        - name: api
+          image: ghcr.io/aihpi/recreate-goods-edit-api:latest
+          imagePullPolicy: Always
+          env:
+            - name: CUBLAS_WORKSPACE_CONFIG
+              value: ":4096:8"
+            - name: MODEL_NAME
+              value: "Qwen/Qwen-Image-Edit"
+            - name: DEVICE
+              value: "cuda"
+            - name: LORA_PATH
+              value: "aihpi/fashion-edit-lora"
+            - name: LORA_WEIGHT_NAME
+              value: "fashion_edit_12000.safetensors"
+            - name: LORA_RANK
+              value: "16"
+            - name: TRUE_CFG_SCALE
+              value: "4.0"
+            - name: NUM_INFERENCE_STEPS
+              value: "50"
+            - name: NEGATIVE_PROMPT
+              value: " "
+            - name: HF_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: litellm-secret
+                  key: HF_TOKEN
+          ports:
+            - containerPort: 8000
+              name: http
+          volumeMounts:
+            - name: model-storage
+              mountPath: /app/model
+          resources:
+            limits:
+              nvidia.com/gpu: "1"
+              memory: "32Gi"
+              cpu: "8"
+            requests:
+              nvidia.com/gpu: "1"
+              memory: "24Gi"
+              cpu: "4"
+          livenessProbe:
+            httpGet:
+              path: /v1/health
+              port: 8000
+            initialDelaySeconds: 600
+            periodSeconds: 30
+            timeoutSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /v1/health
+              port: 8000
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            timeoutSeconds: 5
+      volumes:
+        - name: model-storage
+          persistentVolumeClaim:
+            claimName: qwen-model-storage
