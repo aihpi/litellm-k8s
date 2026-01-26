@@ -31,10 +31,6 @@ spec:
           ports:
             - containerPort: 8000
           env:
-            - name: NVIDIA_VISIBLE_DEVICES
-              value: "all"
-            - name: NVIDIA_DRIVER_CAPABILITIES
-              value: "compute,utility"
             - name: HUGGING_FACE_HUB_TOKEN
               valueFrom:
                 secretKeyRef:
