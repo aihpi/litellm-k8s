@@ -18,7 +18,7 @@ spec:
         accelerator: h100
       containers:
         - name: vllm
-          image: vllm/vllm-openai:latest
+          image: vllm/vllm-openai:latest-cu130
           args:
             - "--model"
             - "Octen/Octen-Embedding-8B"
