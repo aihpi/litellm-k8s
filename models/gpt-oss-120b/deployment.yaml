@@ -24,8 +24,10 @@ spec:
             - "openai/gpt-oss-120b"
             - "--served-model-name"
             - "gpt-oss-120b"
-            - "--max-model-len"
-            - "40960"
+            - "--config"
+            - "/etc/vllm/GPT-OSS_EAGLE3_Hopper.yaml"
+            - "--tensor-parallel-size"
+            - "1"
             - "--port"
             - "8000"
           ports:
@@ -39,6 +41,8 @@ spec:
           volumeMounts:
             - name: model-cache
               mountPath: /root/.cache/huggingface
+            - name: vllm-config
+              mountPath: /etc/vllm
           resources:
             limits:
               nvidia.com/gpu: "1"
@@ -52,3 +56,6 @@ spec:
         - name: model-cache
           persistentVolumeClaim:
             claimName: gpt-oss-120b-cache
+        - name: vllm-config
+          configMap:
+            name: gpt-oss-120b-config
