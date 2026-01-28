@@ -1,30 +1,29 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: octen-embedding-8b
+  name: gpt-oss-120b
   labels:
-    app: octen-embedding-8b
+    app: gpt-oss-120b
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: octen-embedding-8b
+      app: gpt-oss-120b
   template:
     metadata:
       labels:
-        app: octen-embedding-8b
+        app: gpt-oss-120b
     spec:
-      runtimeClassName: nvidia
       nodeSelector:
-        accelerator: a30
+        accelerator: h100
       containers:
         - name: vllm
           image: vllm/vllm-openai:latest-cu130
           args:
             - "--model"
-            - "Octen/Octen-Embedding-8B"
+            - "openai/gpt-oss-120b"
             - "--served-model-name"
-            - "octen-embedding-8b"
+            - "gpt-oss-120b"
             - "--max-model-len"
             - "40960"
             - "--port"
@@ -32,17 +31,24 @@ spec:
           ports:
             - containerPort: 8000
           env:
-            - name: NVIDIA_VISIBLE_DEVICES
-              value: "all"
-            - name: CUDA_VISIBLE_DEVICES
-              value: "0"
             - name: HUGGING_FACE_HUB_TOKEN
               valueFrom:
                 secretKeyRef:
                   name: litellm-secret
                   key: HF_TOKEN
+          volumeMounts:
+            - name: model-cache
+              mountPath: /root/.cache/huggingface
           resources:
             limits:
-              nvidia.com/gpu: "1"
+              nvidia.com/gpu: "8"
+              memory: "256Gi"
+              cpu: "64"
             requests:
-              nvidia.com/gpu: "1"
+              nvidia.com/gpu: "8"
+              memory: "192Gi"
+              cpu: "32"
+      volumes:
+        - name: model-cache
+          persistentVolumeClaim:
+            claimName: gpt-oss-120b-cache

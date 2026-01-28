@@ -4,6 +4,9 @@ kind: Kustomization
 namespace: litellm
 
 resources:
+  - gpt-oss-120b/pvc.yaml
+  - gpt-oss-120b/deployment.yaml
+  - gpt-oss-120b/service.yaml
   - llama-3b/deployment.yaml
   - llama-3b/service.yaml
   - octen-embedding-8b/deployment.yaml
