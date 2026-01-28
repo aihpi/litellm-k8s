@@ -35,7 +35,7 @@ spec:
           ports:
             - containerPort: 8000
           env:
-            - name: PYTORCH_CUDA_ALLOC_CONF
+            - name: PYTORCH_ALLOC_CONF
               value: "expandable_segments:True"
             - name: HUGGING_FACE_HUB_TOKEN
               valueFrom:
