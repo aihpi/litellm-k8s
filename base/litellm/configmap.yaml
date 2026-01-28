@@ -23,3 +23,6 @@ data:
           api_base: http://octen-embedding-8b-service:8000/v1
           api_key: dummy
           encoding_format: float
+        model_info:
+          metadata:
+            mode: embedding
