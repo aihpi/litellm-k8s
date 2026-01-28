@@ -25,6 +25,8 @@ spec:
             - "Octen/Octen-Embedding-8B"
             - "--runner"
             - "pooling"
+            - "--convert"
+            - "embed"
             - "--served-model-name"
             - "octen-embedding-8b"
             - "--max-model-len"
