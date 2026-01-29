@@ -1,13 +1,13 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: granite-4-h-small-service
+  name: granite-4-h-tiny-service
   labels:
-    app: granite-4-h-small
+    app: granite-4-h-tiny
 spec:
   type: ClusterIP
   selector:
-    app: granite-4-h-small
+    app: granite-4-h-tiny
   ports:
     - name: http
       port: 8000

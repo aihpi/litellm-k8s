@@ -1,18 +1,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: granite-4-h-small
+  name: granite-4-h-tiny
   labels:
-    app: granite-4-h-small
+    app: granite-4-h-tiny
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: granite-4-h-small
+      app: granite-4-h-tiny
   template:
     metadata:
       labels:
-        app: granite-4-h-small
+        app: granite-4-h-tiny
     spec:
       runtimeClassName: nvidia
       nodeSelector:
@@ -22,13 +22,9 @@ spec:
           image: vllm/vllm-openai:latest-cu130
           args:
             - "--model"
-            - "ibm-granite/granite-4.0-h-small-FP8"
+            - "ibm-granite/granite-4.0-h-tiny"
             - "--served-model-name"
-            - "granite-4-h-small"
-            - "--tensor-parallel-size"
-            - "2"
-            - "--quantization"
-            - "fp8"
+            - "granite-4-h-tiny"
             - "--tool-call-parser"
             - "hermes"
             - "--gpu-memory-utilization"
@@ -43,7 +39,7 @@ spec:
             - name: NVIDIA_VISIBLE_DEVICES
               value: "all"
             - name: CUDA_VISIBLE_DEVICES
-              value: "0,1"
+              value: "0"
             - name: HUGGING_FACE_HUB_TOKEN
               valueFrom:
                 secretKeyRef:
@@ -54,14 +50,14 @@ spec:
               mountPath: /root/.cache/huggingface
           resources:
             limits:
-              nvidia.com/gpu: "2"
-              memory: "128Gi"
-              cpu: "32"
-            requests:
-              nvidia.com/gpu: "2"
-              memory: "96Gi"
+              nvidia.com/gpu: "1"
+              memory: "64Gi"
               cpu: "16"
+            requests:
+              nvidia.com/gpu: "1"
+              memory: "48Gi"
+              cpu: "8"
       volumes:
         - name: model-cache
           persistentVolumeClaim:
-            claimName: granite-4-h-small-cache
+            claimName: granite-4-h-tiny-cache
