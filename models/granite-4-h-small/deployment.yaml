@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: granite-4-h-small
+  labels:
+    app: granite-4-h-small
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: granite-4-h-small
+  template:
+    metadata:
+      labels:
+        app: granite-4-h-small
+    spec:
+      runtimeClassName: nvidia
+      nodeSelector:
+        accelerator: a30
+      containers:
+        - name: vllm
+          image: vllm/vllm-openai:latest-cu130
+          args:
+            - "--model"
+            - "ibm-granite/granite-4.0-h-small"
+            - "--served-model-name"
+            - "granite-4-h-small"
+            - "--tensor-parallel-size"
+            - "2"
+            - "--tool-call-parser"
+            - "hermes"
+            - "--gpu-memory-utilization"
+            - "0.95"
+            - "--port"
+            - "8000"
+          ports:
+            - containerPort: 8000
+          env:
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: "all"
+            - name: CUDA_VISIBLE_DEVICES
+              value: "0,1"
+            - name: HUGGING_FACE_HUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: litellm-secret
+                  key: HF_TOKEN
+          resources:
+            limits:
+              nvidia.com/gpu: "2"
+              memory: "128Gi"
+              cpu: "32"
+            requests:
+              nvidia.com/gpu: "2"
+              memory: "96Gi"
+              cpu: "16"

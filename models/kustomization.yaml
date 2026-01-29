@@ -4,6 +4,8 @@ kind: Kustomization
 namespace: litellm
 
 resources:
+  - granite-4-h-small/deployment.yaml
+  - granite-4-h-small/service.yaml
   - gpt-oss-120b/configmap.yaml
   - gpt-oss-120b/pvc.yaml
   - gpt-oss-120b/deployment.yaml
