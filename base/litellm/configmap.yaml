@@ -28,10 +28,10 @@ data:
             mode: embedding
       - model_name: minilm-embedding
         litellm_params:
-          model: huggingface/sentence-transformers/all-MiniLM-L6-v2
+          model: openai/all-MiniLM-L6-v2
           api_base: http://minilm-embedding-service:8000/v1
           api_key: dummy
-          additional_drop_params: ["encoding_format"]
+          encoding_format: float
         model_info:
           metadata:
             mode: embedding
