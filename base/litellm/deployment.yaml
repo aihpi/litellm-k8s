@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: litellm
-          image: ghcr.io/aihpi/litellm:aihpi-provider
+          image: ghcr.io/aihpi/tool-litellm:aihpi-provider
           imagePullPolicy: Always
           command: ["litellm"]
           args: ["--config", "/etc/litellm/config.yaml", "--port", "4000"]
