@@ -33,6 +33,8 @@ spec:
             - "4096"
             - "--max-num-seqs"
             - "32"
+            - "--max-model-len"
+            - "32768"
             - "--gpu-memory-utilization"
             - "0.95"
             - "--port"
