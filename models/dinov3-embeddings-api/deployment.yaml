@@ -19,7 +19,7 @@ spec:
         accelerator: a30
       containers:
         - name: api
-          image: ghcr.io/aihpi/tool-dinov3-embeddings-api:main-01caa8f
+          image: ghcr.io/aihpi/tool-dinov3-embeddings-api:latest
           ports:
             - containerPort: 8000
           env:
