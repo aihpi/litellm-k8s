@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dinov3-embeddings-api
+  labels:
+    app: dinov3-embeddings-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dinov3-embeddings-api
+  template:
+    metadata:
+      labels:
+        app: dinov3-embeddings-api
+    spec:
+      runtimeClassName: nvidia
+      nodeSelector:
+        accelerator: a30
+      containers:
+        - name: api
+          image: ghcr.io/aihpi/tool-dinov3-embeddings-api:main-01caa8f
+          ports:
+            - containerPort: 8000
+          env:
+            - name: DEVICE
+              value: cuda
+            - name: MODEL_ID
+              value: facebook/dinov3-vitl16-pretrain-lvd1689m
+            - name: BATCH_SIZE
+              value: "8"
+            - name: HF_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: litellm-secret
+                  key: HF_TOKEN
+          resources:
+            limits:
+              nvidia.com/gpu: "1"
+            requests:
+              nvidia.com/gpu: "1"

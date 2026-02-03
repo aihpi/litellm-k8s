@@ -11,6 +11,8 @@ resources:
   - gpt-oss-120b/pvc.yaml
   - gpt-oss-120b/deployment.yaml
   - gpt-oss-120b/service.yaml
+  - dinov3-embeddings-api/deployment.yaml
+  - dinov3-embeddings-api/service.yaml
   - minilm-embedding/deployment.yaml
   - minilm-embedding/service.yaml
   - octen-embedding-8b/deployment.yaml
