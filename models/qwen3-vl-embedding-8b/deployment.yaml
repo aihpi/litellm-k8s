@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qwen3-vl-embedding-8b
+  labels:
+    app: qwen3-vl-embedding-8b
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: qwen3-vl-embedding-8b
+  template:
+    metadata:
+      labels:
+        app: qwen3-vl-embedding-8b
+    spec:
+      runtimeClassName: nvidia
+      nodeSelector:
+        accelerator: a30
+      containers:
+        - name: vllm
+          image: vllm/vllm-openai:latest-cu130
+          args:
+            - "--model"
+            - "Qwen/Qwen3-VL-Embedding-8B"
+            - "--runner"
+            - "pooling"
+            - "--convert"
+            - "embed"
+            - "--served-model-name"
+            - "qwen3-vl-embedding-8b"
+            - "--max-num-batched-tokens"
+            - "8192"
+            - "--max-num-seqs"
+            - "256"
+            - "--max-model-len"
+            - "32768"
+            - "--port"
+            - "8000"
+          ports:
+            - containerPort: 8000
+          env:
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: "all"
+            - name: CUDA_VISIBLE_DEVICES
+              value: "0"
+            - name: HUGGING_FACE_HUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: litellm-secret
+                  key: HF_TOKEN
+          resources:
+            limits:
+              nvidia.com/gpu: "1"
+            requests:
+              nvidia.com/gpu: "1"

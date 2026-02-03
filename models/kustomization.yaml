@@ -15,6 +15,8 @@ resources:
   - minilm-embedding/service.yaml
   - octen-embedding-8b/deployment.yaml
   - octen-embedding-8b/service.yaml
+  - qwen3-vl-embedding-8b/deployment.yaml
+  - qwen3-vl-embedding-8b/service.yaml
   - qwen-image-edit/pvc.yaml
   - qwen-image-edit/deployment.yaml
   - qwen-image-edit/service.yaml
