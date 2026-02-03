@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: minilm-embedding-service
+  labels:
+    app: minilm-embedding
+spec:
+  type: ClusterIP
+  selector:
+    app: minilm-embedding
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000

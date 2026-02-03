@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minilm-embedding
+  labels:
+    app: minilm-embedding
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: minilm-embedding
+  template:
+    metadata:
+      labels:
+        app: minilm-embedding
+    spec:
+      nodeSelector:
+        node-type: cpu
+      containers:
+        - name: tei
+          image: ghcr.io/huggingface/text-embeddings-inference:latest
+          args:
+            - "--model-id"
+            - "sentence-transformers/all-MiniLM-L6-v2"
+            - "--port"
+            - "8000"
+          ports:
+            - containerPort: 8000
+          env:
+            - name: HUGGING_FACE_HUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: litellm-secret
+                  key: HF_TOKEN
+          resources:
+            limits:
+              cpu: "4"
+              memory: "8Gi"
+            requests:
+              cpu: "2"
+              memory: "4Gi"
