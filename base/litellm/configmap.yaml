@@ -31,7 +31,6 @@ data:
           model: huggingface/sentence-transformers/all-MiniLM-L6-v2
           api_base: http://minilm-embedding-service:8000/v1
           api_key: dummy
-          encoding_format: float
         model_info:
           metadata:
             mode: embedding
