@@ -22,3 +22,7 @@ resources:
   - qwen-image-edit/pvc.yaml
   - qwen-image-edit/deployment.yaml
   - qwen-image-edit/service.yaml
+  - llama-3-3-70b/configmap.yaml
+  - llama-3-3-70b/pvc.yaml
+  - llama-3-3-70b/deployment.yaml
+  - llama-3-3-70b/service.yaml

@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llama-3-3-70b
+  labels:
+    app: llama-3-3-70b
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: llama-3-3-70b
+  template:
+    metadata:
+      labels:
+        app: llama-3-3-70b
+    spec:
+      nodeSelector:
+        accelerator: h100
+      containers:
+        - name: vllm
+          image: vllm/vllm-openai:latest-cu130
+          args:
+            - "--model"
+            - "openai/llama-3-3-70b"
+            - "--served-model-name"
+            - "llama-3-3-70b"
+            - "--config"
+            - "/etc/vllm/LLAMA-70B_Hopper.yaml"
+            - "--tensor-parallel-size"
+            - "1"
+            - "--gpu-memory-utilization"
+            - "0.95"
+            - "--port"
+            - "8000"
+          ports:
+            - containerPort: 8000
+          env:
+            - name: PYTORCH_ALLOC_CONF
+              value: "expandable_segments:True"
+            - name: HUGGING_FACE_HUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: litellm-secret
+                  key: HF_TOKEN
+          volumeMounts:
+            - name: model-cache
+              mountPath: /root/.cache/huggingface
+            - name: vllm-config
+              mountPath: /etc/vllm
+          resources:
+            limits:
+              nvidia.com/gpu: "1"
+              memory: "256Gi"
+              cpu: "64"
+            requests:
+              nvidia.com/gpu: "1"
+              memory: "192Gi"
+              cpu: "32"
+      volumes:
+        - name: model-cache
+          persistentVolumeClaim:
+            claimName: llama-3-3-70b-cache
+        - name: vllm-config
+          configMap:
+            name: llama-3-3-70b-config
