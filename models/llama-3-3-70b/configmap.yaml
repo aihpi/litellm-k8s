@@ -8,4 +8,5 @@ data:
     async-scheduling: true
     no-enable-prefix-caching: true
     max-num-batched-tokens: 8192
-    max-num-seqs: 16
+    max-num-seqs: 8
+    max-model-len: 32000
