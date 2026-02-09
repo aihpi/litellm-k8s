@@ -21,7 +21,7 @@ spec:
           image: vllm/vllm-openai:latest-cu130
           args:
             - "--model"
-            - "openai/llama-3-3-70b"
+            - "nvidia/Llama-3.3-70B-Instruct-FP8"
             - "--served-model-name"
             - "llama-3-3-70b"
             - "--config"
