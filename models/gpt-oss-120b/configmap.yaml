@@ -5,11 +5,12 @@ metadata:
 data:
   GPT-OSS_Hopper.yaml: |
     async-scheduling: true
-    no-enable-prefix-caching: true
+    enable-prefix-caching: true
     max-cudagraph-capture-size: 2048
-    max-num-batched-tokens: 2048
+    max-num-batched-tokens: 8192
     max-num-seqs: 8
     stream-interval: 20
+    max-model-len: 60000
   GPT-OSS_EAGLE3_Hopper.yaml: |
     async-scheduling: true
     no-enable-prefix-caching: true
