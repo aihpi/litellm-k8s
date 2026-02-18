@@ -30,7 +30,7 @@ spec:
             - "--dtype"
             - "half"
             - "--max-model-len"
-            - "16384"
+            - "20480"
             - "--max-num-seqs"
             - "8"
             - "--gpu-memory-utilization"
