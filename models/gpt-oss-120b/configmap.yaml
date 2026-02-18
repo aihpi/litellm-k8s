@@ -7,7 +7,7 @@ data:
     async-scheduling: true
     enable-prefix-caching: true
     max-cudagraph-capture-size: 2048
-    max-num-batched-tokens: 8192
+    max-num-batched-tokens: 4096
     max-num-seqs: 8
     stream-interval: 20
     max-model-len: 60000

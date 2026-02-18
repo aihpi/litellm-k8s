@@ -29,7 +29,7 @@ spec:
             - "--tensor-parallel-size"
             - "1"
             - "--gpu-memory-utilization"
-            - "0.95"
+            - "0.90"
             - "--port"
             - "8000"
           ports:
