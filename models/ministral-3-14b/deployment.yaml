@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ministral-3-14b
+  labels:
+    app: ministral-3-14b
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ministral-3-14b
+  template:
+    metadata:
+      labels:
+        app: ministral-3-14b
+    spec:
+      runtimeClassName: nvidia
+      nodeSelector:
+        accelerator: a30
+      containers:
+        - name: vllm
+          image: vllm/vllm-openai:latest-cu130
+          args:
+            - "--model"
+            - "mistralai/Ministral-3-14B-Instruct-2512"
+            - "--served-model-name"
+            - "ministral-3-14b"
+            - "--tensor-parallel-size"
+            - "2"
+            - "--dtype"
+            - "half"
+            - "--max-model-len"
+            - "16384"
+            - "--max-num-seqs"
+            - "8"
+            - "--gpu-memory-utilization"
+            - "0.95"
+            - "--port"
+            - "8000"
+          ports:
+            - containerPort: 8000
+          env:
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: "all"
+            - name: HUGGING_FACE_HUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: litellm-secret
+                  key: HF_TOKEN
+          resources:
+            limits:
+              nvidia.com/gpu: "2"
+            requests:
+              nvidia.com/gpu: "2"
