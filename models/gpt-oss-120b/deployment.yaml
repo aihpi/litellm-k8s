@@ -25,7 +25,7 @@ spec:
             - "--served-model-name"
             - "gpt-oss-120b"
             - "--config"
-            - "/etc/vllm/GPT-OSS_Hopper.yaml"
+            - "/etc/vllm/GPT-OSS_Hopper_Workshop.yaml"
             - "--tensor-parallel-size"
             - "1"
             - "--gpu-memory-utilization"

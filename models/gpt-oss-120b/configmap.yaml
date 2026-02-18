@@ -10,7 +10,15 @@ data:
     max-num-batched-tokens: 4096
     max-num-seqs: 8
     stream-interval: 20
-    max-model-len: 60000
+    max-model-len: 65536
+  GPT-OSS_Hopper_Workshop.yaml: |
+    async-scheduling: true
+    enable-prefix-caching: true
+    max-cudagraph-capture-size: 2048
+    max-num-batched-tokens: 4096
+    max-num-seqs: 16
+    stream-interval: 20
+    max-model-len: 8192
   GPT-OSS_EAGLE3_Hopper.yaml: |
     async-scheduling: true
     no-enable-prefix-caching: true
