@@ -22,11 +22,9 @@ spec:
           image: vllm/vllm-openai:latest-cu130
           args:
             - "--model"
-            - "Qwen/Qwen3-VL-32B-Instruct"
+            - "Qwen/Qwen3-VL-32B-Instruct-FP8"
             - "--served-model-name"
             - "qwen3-vl-32b"
-            - "--quantization"
-            - "fp8"
             - "--tensor-parallel-size"
             - "1"
             - "--gpu-memory-utilization"
