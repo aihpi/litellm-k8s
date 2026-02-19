@@ -33,7 +33,6 @@ spec:
             - "32768"
             - "--max-num-seqs"
             - "6"
-            - "--trust-remote-code"
             - "--port"
             - "8000"
           ports:
