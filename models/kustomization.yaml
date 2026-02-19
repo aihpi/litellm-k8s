@@ -19,6 +19,8 @@ resources:
   - octen-embedding-8b/service.yaml
   - qwen3-vl-embedding-8b/deployment.yaml
   - qwen3-vl-embedding-8b/service.yaml
+  - qwen3-vl-32b/deployment.yaml
+  - qwen3-vl-32b/service.yaml
   - ministral-3-14b/deployment.yaml
   - ministral-3-14b/service.yaml
   - qwen-image-edit/pvc.yaml
