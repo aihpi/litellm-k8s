@@ -5,10 +5,12 @@ namespace: litellm-staging
 
 resources:
   - ../../base
+  - ../../base/kisz-auth-wrapper
 
 patches:
   - path: patches/litellm-staging-config.yaml
   - path: patches/litellm-staging-service.yaml
+  - path: patches/kisz-auth-wrapper-staging-service.yaml
 
 replicas:
   - name: litellm-proxy

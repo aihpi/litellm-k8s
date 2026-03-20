@@ -39,11 +39,18 @@ Internet -> Ingress -> LiteLLM (Gateway)
 
 Use `./scripts/deploy.sh staging` to create a `litellm-staging` namespace without redeploying the GPU model workloads.
 
-This staging overlay deploys LiteLLM, Postgres, Qdrant, and the Postgres PVC in `litellm-staging`, then points LiteLLM at the existing model services in `litellm` via cluster DNS. The staging `litellm-service` is also exposed as a `LoadBalancer`, like the main namespace service.
+This staging overlay deploys LiteLLM, the KISZ Auth Wrapper, Postgres, Qdrant, and the Postgres PVC in `litellm-staging`, then points LiteLLM at the existing model services in `litellm` via cluster DNS. The staging `litellm-service` and `kisz-auth-wrapper-service` are both exposed as `LoadBalancer` services.
 
 ```bash
 ./scripts/deploy.sh staging
 kubectl get svc -n litellm-staging litellm-service
+kubectl get svc -n litellm-staging kisz-auth-wrapper-service
+```
+
+For the wrapper OIDC flow, create a temporary HTTPS hostname such as `llm-portal-staging.<your-domain>` that points to the wrapper LoadBalancer and set Authentik's redirect URI to:
+
+```text
+https://llm-portal-staging.<your-domain>/callback
 ```
 
 ## Adding Models

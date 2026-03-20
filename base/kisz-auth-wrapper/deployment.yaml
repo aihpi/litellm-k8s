@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kisz-auth-wrapper
+  labels:
+    app: kisz-auth-wrapper
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kisz-auth-wrapper
+  template:
+    metadata:
+      labels:
+        app: kisz-auth-wrapper
+    spec:
+      containers:
+        - name: kisz-auth-wrapper
+          image: ghcr.io/aihpi/tool-kisz-auth-wrapper:aihpi-provider
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            - name: AUTHENTIK_ISSUER
+              valueFrom:
+                secretKeyRef:
+                  name: kisz-auth-wrapper-secret
+                  key: AUTHENTIK_ISSUER
+            - name: AUTHENTIK_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: kisz-auth-wrapper-secret
+                  key: AUTHENTIK_CLIENT_ID
+            - name: AUTHENTIK_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: kisz-auth-wrapper-secret
+                  key: AUTHENTIK_CLIENT_SECRET
+            - name: AUTHENTIK_REDIRECT_URI
+              valueFrom:
+                secretKeyRef:
+                  name: kisz-auth-wrapper-secret
+                  key: AUTHENTIK_REDIRECT_URI
+            - name: SESSION_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: kisz-auth-wrapper-secret
+                  key: SESSION_SECRET
+            - name: LITELLM_MASTER_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: litellm-secret
+                  key: LITELLM_MASTER_KEY
+            - name: LITELLM_BASE_URL
+              value: http://litellm-service:4000
+            - name: DEFAULT_USER_ROLE
+              value: internal_user
+            - name: DEFAULT_USER_BUDGET
+              value: "10.0"
+            - name: ADMIN_AUTHENTIK_GROUP
+              value: kisz-admins
+            - name: SESSION_HTTPS_ONLY
+              value: "true"
+          readinessProbe:
+            httpGet:
+              path: /login
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /login
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi

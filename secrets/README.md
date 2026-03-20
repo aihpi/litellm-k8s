@@ -14,6 +14,7 @@ cp example-secrets.yaml secrets.yaml
 # Use strong random keys!
 export MASTER_KEY=$(openssl rand -hex 32)
 export POSTGRES_PASSWORD=$(openssl rand -hex 16)
+export WRAPPER_SESSION_SECRET=$(openssl rand -hex 32)
 
 kubectl create secret generic litellm-secret \
   --from-literal=LITELLM_MASTER_KEY="sk-${MASTER_KEY}" \
@@ -25,6 +26,16 @@ kubectl create secret generic litellm-secret \
   --from-literal=LDAP_BIND_DN="CN=bind-user,OU=Users,DC=example,DC=org" \
   --from-literal=LDAP_BIND_PASSWORD="CHANGE-ME" \
   --dry-run=client -o yaml > secrets.yaml
+
+printf '\n---\n' >> secrets.yaml
+
+kubectl create secret generic kisz-auth-wrapper-secret \
+  --from-literal=AUTHENTIK_ISSUER="https://auth.example.com/application/o/kisz-llm" \
+  --from-literal=AUTHENTIK_CLIENT_ID="kisz-llm" \
+  --from-literal=AUTHENTIK_CLIENT_SECRET="CHANGE-ME" \
+  --from-literal=AUTHENTIK_REDIRECT_URI="https://llm-portal-staging.example.com/callback" \
+  --from-literal=SESSION_SECRET="${WRAPPER_SESSION_SECRET}" \
+  --dry-run=client -o yaml >> secrets.yaml
 ```
 
 3. Apply:
@@ -37,6 +48,8 @@ For staging, apply the same file to `litellm-staging` instead:
 ```bash
 kubectl apply -n litellm-staging -f secrets.yaml
 ```
+
+The wrapper reuses `litellm-secret` for `LITELLM_MASTER_KEY` and reads its OIDC/session values from `kisz-auth-wrapper-secret`.
 
 ## Hugging Face token (gated models)
 

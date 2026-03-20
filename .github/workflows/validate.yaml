@@ -25,4 +25,5 @@ jobs:
       - name: Build kustomize
         run: |
           ./kustomize build overlays/dev
+          ./kustomize build overlays/staging
           ./kustomize build overlays/prod

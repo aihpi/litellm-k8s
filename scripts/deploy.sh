@@ -22,9 +22,14 @@ if [ "$ENV" = "staging" ]; then
 
   echo "Waiting for PostgreSQL..."
   kubectl wait --for=condition=ready pod -l app=postgres -n "$NAMESPACE" --timeout=120s
+  echo "Waiting for LiteLLM..."
+  kubectl rollout status deployment/litellm-proxy -n "$NAMESPACE" --timeout=180s
+  echo "Waiting for KISZ Auth Wrapper..."
+  kubectl rollout status deployment/kisz-auth-wrapper -n "$NAMESPACE" --timeout=180s
 
   echo "Deployment complete!"
   echo "Port-forward: kubectl port-forward -n ${NAMESPACE} service/litellm-service 4000:4000"
+  echo "Wrapper service: kubectl get svc -n ${NAMESPACE} kisz-auth-wrapper-service"
   exit 0
 fi
 
@@ -32,6 +37,8 @@ kubectl apply -k base/
 
 echo "Waiting for PostgreSQL..."
 kubectl wait --for=condition=ready pod -l app=postgres -n "$NAMESPACE" --timeout=120s
+echo "Waiting for LiteLLM..."
+kubectl rollout status deployment/litellm-proxy -n "$NAMESPACE" --timeout=180s
 
 kubectl apply -k models/
 
