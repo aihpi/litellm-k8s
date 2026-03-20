@@ -29,7 +29,13 @@ kubectl create secret generic litellm-secret \
 
 3. Apply:
 ```bash
-kubectl apply -f secrets.yaml
+kubectl apply -n litellm -f secrets.yaml
+```
+
+For staging, apply the same file to `litellm-staging` instead:
+
+```bash
+kubectl apply -n litellm-staging -f secrets.yaml
 ```
 
 ## Hugging Face token (gated models)
