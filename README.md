@@ -39,11 +39,11 @@ Internet -> Ingress -> LiteLLM (Gateway)
 
 Use `./scripts/deploy.sh staging` to create a `litellm-staging` namespace without redeploying the GPU model workloads.
 
-This staging overlay deploys LiteLLM, Postgres, Qdrant, and the Postgres PVC in `litellm-staging`, then points LiteLLM at the existing model services in `litellm` via cluster DNS.
+This staging overlay deploys LiteLLM, Postgres, Qdrant, and the Postgres PVC in `litellm-staging`, then points LiteLLM at the existing model services in `litellm` via cluster DNS. The staging `litellm-service` is also exposed as a `LoadBalancer`, like the main namespace service.
 
 ```bash
 ./scripts/deploy.sh staging
-kubectl port-forward -n litellm-staging service/litellm-service 4000:4000
+kubectl get svc -n litellm-staging litellm-service
 ```
 
 ## Adding Models
