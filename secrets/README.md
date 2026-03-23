@@ -23,6 +23,9 @@ kubectl create secret generic litellm-secret \
   --from-literal=UI_USERNAME="admin" \
   --from-literal=UI_PASSWORD="CHANGE-ME" \
   --from-literal=HF_TOKEN="hf_..." \
+  --from-literal=AUTHENTIK_ISSUER="https://auth.example.com/application/o/litellm" \
+  --from-literal=AUTHENTIK_CLIENT_ID="litellm" \
+  --from-literal=AUTHENTIK_CLIENT_SECRET="CHANGE-ME" \
   --from-literal=LDAP_BIND_DN="CN=bind-user,OU=Users,DC=example,DC=org" \
   --from-literal=LDAP_BIND_PASSWORD="CHANGE-ME" \
   --dry-run=client -o yaml > secrets.yaml
@@ -50,6 +53,9 @@ kubectl apply -n litellm-staging -f secrets.yaml
 ```
 
 The wrapper reuses `litellm-secret` for `LITELLM_MASTER_KEY` and reads its OIDC/session values from `kisz-auth-wrapper-secret`.
+
+The native LiteLLM UI SSO flow reads `AUTHENTIK_ISSUER`, `AUTHENTIK_CLIENT_ID`, and
+`AUTHENTIK_CLIENT_SECRET` from `litellm-secret`.
 
 ## Hugging Face token (gated models)
 
