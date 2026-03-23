@@ -28,4 +28,4 @@ spec:
             - name: AUTHENTIK_GROUPS_ATTRIBUTE
               value: groups
             - name: PROXY_BASE_URL
-              value: http://10.127.129.6
+              value: http://10.127.129.5
