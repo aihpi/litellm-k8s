@@ -1,0 +1,14 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kisz-auth-wrapper
+spec:
+  template:
+    spec:
+      containers:
+        - name: kisz-auth-wrapper
+          env:
+            - name: ADMIN_AUTHENTIK_GROUP
+              value: SCI-ADMINS
+            - name: SESSION_HTTPS_ONLY
+              value: "false"

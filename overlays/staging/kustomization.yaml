@@ -11,6 +11,7 @@ patches:
   - path: patches/litellm-staging-config.yaml
   - path: patches/litellm-staging-service.yaml
   - path: patches/kisz-auth-wrapper-staging-service.yaml
+  - path: patches/kisz-auth-wrapper-staging-deployment.yaml
 
 replicas:
   - name: litellm-proxy
