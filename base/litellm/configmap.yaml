@@ -6,6 +6,9 @@ data:
   LITELLM_LOG: info
   UI_PATH: /ui
   config.yaml: |
+    litellm_settings:
+      success_callback: ["prometheus"]
+      
     model_list:
       - model_name: llama-3b
         litellm_params:
