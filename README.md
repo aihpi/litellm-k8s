@@ -26,14 +26,16 @@ open http://localhost:4000/ui/login/
 ## Architecture
 
 ```
-Internet -> Ingress -> LiteLLM (Gateway)
-                          |
-                          v
-                    ClusterIP Services
-                          |
-                          v
-                    vLLM Model Pods
+Internet -> nginx proxy (LoadBalancer) -> LiteLLM (ClusterIP)
+                                               |
+                                               v
+                                         ClusterIP Services
+                                               |
+                                               v
+                                         vLLM Model Pods
 ```
+
+An nginx reverse proxy sits in front of LiteLLM and acts as the external-facing LoadBalancer. It blocks the `/metrics` endpoint from external access (returns 403) while internal Prometheus scrapers can still reach LiteLLM directly via the ClusterIP service.
 
 ## Staging Namespace
 

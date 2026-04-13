@@ -5,7 +5,7 @@ metadata:
   labels:
     app: litellm
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   selector:
     app: litellm
   ports:

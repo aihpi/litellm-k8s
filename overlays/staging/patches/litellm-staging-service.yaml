@@ -3,4 +3,4 @@ kind: Service
 metadata:
   name: litellm-service
 spec:
-  type: LoadBalancer
+  type: ClusterIP
