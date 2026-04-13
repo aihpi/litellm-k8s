@@ -2,10 +2,8 @@ apiVersion: v1
 kind: Service
 metadata:
   name: nginx-proxy
-  namespace: litellm
 spec:
   type: LoadBalancer
-  loadBalancerIP: 10.127.129.0 # Forces Cilium to use your original IP
   selector:
     app: nginx-proxy
   ports:

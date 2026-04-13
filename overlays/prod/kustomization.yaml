@@ -10,6 +10,7 @@ resources:
 
 patches:
   - path: patches/litellm-prod.yaml
+  - path: patches/nginx-prod-service.yaml
 
 replicas:
   - name: litellm-proxy
