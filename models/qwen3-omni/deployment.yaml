@@ -23,7 +23,6 @@ spec:
           command: ["vllm", "serve"]
           args:
             - "marksverdhei/Qwen3-Omni-30B-A3B-FP8"
-            - "--omni"
             - "--served-model-name"
             - "qwen3-omni"
             - "--tensor-parallel-size"
