@@ -30,3 +30,6 @@ resources:
   - llama-3-3-70b/pvc.yaml
   - llama-3-3-70b/deployment.yaml
   - llama-3-3-70b/service.yaml
+  - qwen3-omni/pvc.yaml
+  - qwen3-omni/deployment.yaml
+  - qwen3-omni/service.yaml
