@@ -20,10 +20,10 @@ spec:
       containers:
         - name: vllm
           image: vllm/vllm-omni:v0.18.0
-          command: ["vllm", "serve", "--omni"]
+          command: ["vllm", "serve"]
           args:
-            - "--model"
             - "marksverdhei/Qwen3-Omni-30B-A3B-FP8"
+            - "--omni"
             - "--served-model-name"
             - "qwen3-omni"
             - "--tensor-parallel-size"
@@ -35,7 +35,7 @@ spec:
             - "--max-num-seqs"
             - "8"
             - "--limit-mm-per-prompt"
-            - "image=0,video=0,audio=5"
+            - '{"image": 0, "video": 0, "audio": 5}'
             - "--port"
             - "8000"
           ports:
