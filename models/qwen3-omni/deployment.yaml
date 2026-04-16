@@ -43,6 +43,8 @@ spec:
           env:
             - name: NVIDIA_VISIBLE_DEVICES
               value: "all"
+            - name: NVIDIA_DRIVER_CAPABILITIES
+              value: "compute,utility"
             - name: HUGGING_FACE_HUB_TOKEN
               valueFrom:
                 secretKeyRef:
@@ -60,7 +62,13 @@ spec:
           volumeMounts:
             - name: model-cache
               mountPath: /root/.cache/huggingface
+            - name: shm
+              mountPath: /dev/shm
       volumes:
         - name: model-cache
           persistentVolumeClaim:
             claimName: qwen3-omni-cache
+        - name: shm
+          emptyDir:
+            medium: Memory
+            sizeLimit: "16Gi"
