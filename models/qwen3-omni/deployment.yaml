@@ -25,8 +25,6 @@ spec:
             - "marksverdhei/Qwen3-Omni-30B-A3B-FP8"
             - "--served-model-name"
             - "qwen3-omni"
-            - "--dtype"
-            - "bfloat16"
             - "--tensor-parallel-size"
             - "1"
             - "--gpu-memory-utilization"
