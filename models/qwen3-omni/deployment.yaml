@@ -20,6 +20,7 @@ spec:
       containers:
         - name: vllm
           image: vllm/vllm-omni:v0.18.0
+          command: ["vllm", "serve", "--omni"]
           args:
             - "--model"
             - "marksverdhei/Qwen3-Omni-30B-A3B-FP8"
