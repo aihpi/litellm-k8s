@@ -22,7 +22,7 @@ spec:
           image: vllm/vllm-openai:latest-cu130
           args:
             - "--model"
-            - "mistralai/Ministral-3-14B-Instruct-2512"
+            - "mistralai/Ministral-3-14B-Instruct-2512-BF16"
             - "--served-model-name"
             - "ministral-3-14b"
             - "--tensor-parallel-size"
@@ -31,7 +31,7 @@ spec:
             - "mistral"
             - "--enable-auto-tool-choice"
             - "--dtype"
-            - "half"
+            - "bfloat16"
             - "--max-model-len"
             - "20480"
             - "--max-num-seqs"
@@ -43,8 +43,6 @@ spec:
           ports:
             - containerPort: 8000
           env:
-            - name: NVIDIA_VISIBLE_DEVICES
-              value: "all"
             - name: HUGGING_FACE_HUB_TOKEN
               valueFrom:
                 secretKeyRef:
