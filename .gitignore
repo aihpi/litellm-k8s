@@ -6,6 +6,8 @@ secrets/*.yml
 !secrets/example-secrets.yaml
 *.secret.yaml
 *-secret.yaml
+# SealedSecrets are encrypted and safe to commit
+!**/sealed-secrets/*-secret.yaml
 
 # Kubeconfig
 kubeconfig

@@ -6,6 +6,7 @@ namespace: litellm-staging
 resources:
   - ../../base
   - ../../base/kisz-auth-wrapper
+  - sealed-secrets/litellm-secret.yaml
 
 patches:
   - path: patches/litellm-staging-config.yaml
