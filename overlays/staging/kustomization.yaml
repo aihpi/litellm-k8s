@@ -15,6 +15,7 @@ patches:
   - path: patches/kisz-auth-wrapper-staging-deployment.yaml
   - path: patches/postgres-staging-pvc.yaml
   - path: patches/nginx-staging-config.yaml
+  - path: patches/nginx-staging-service.yaml
 
 replicas:
   - name: litellm-proxy
