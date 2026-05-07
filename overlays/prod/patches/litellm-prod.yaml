@@ -14,7 +14,7 @@ spec:
         node-type: cpu
       containers:
         - name: litellm
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           readinessProbe:
             httpGet:
               path: /litellm/.well-known/litellm-ui-config
