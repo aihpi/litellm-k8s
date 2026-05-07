@@ -7,15 +7,17 @@ resources:
   - ../../base
   - ../../models
   - ingress.yaml
+  - sealed-secrets/litellm-secret.yaml
 
 patches:
   - path: patches/litellm-prod.yaml
   - path: patches/nginx-prod-service.yaml
+  - path: patches/litellm-prod-authentik-sso.yaml
 
 replicas:
   - name: litellm-proxy
     count: 1
 
 images:
-  - name: ghcr.io/aihpi/litellm
-    newTag: aihpi-provider
+  - name: ghcr.io/aihpi/tool-litellm
+    digest: sha256:594851f36bd27511f8d2607d56bf93e86072b77d8e97f713c44c179932dd3615
