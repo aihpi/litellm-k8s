@@ -26,6 +26,16 @@ spec:
             - "MODEL_NAME"
             - "--max-model-len"
             - "MAX_MODEL_LEN"
+            # Optional: dynamic LoRA adapter loading.
+            # Sizing: max-loras pre-allocates GPU memory per slot at max-lora-rank.
+            # Use 4 on 80GB cards (H100), 2 on 24GB cards (A30) as a starting point.
+            # - "--enable-lora"
+            # - "--max-loras"
+            # - "4"
+            # - "--max-lora-rank"
+            # - "64"
+            # - "--lora-modules"
+            # - "my-adapter=/adapters/my-adapter"
             - "--port"
             - "PORT"
           ports:
@@ -36,6 +46,17 @@ spec:
                 secretKeyRef:
                   name: litellm-secret
                   key: HF_TOKEN
+            # Optional: enable runtime /v1/load_lora_adapter and /v1/unload_lora_adapter.
+            # - name: VLLM_ALLOW_RUNTIME_LORA_UPDATING
+            #   value: "true"
+          # Optional LoRA adapter PVC (pair with the args above and a MODEL_NAME-adapters PVC):
+          # volumeMounts:
+          #   - name: adapters
+          #     mountPath: /adapters
           resources:
             limits:
               nvidia.com/gpu: "GPU_COUNT"
+      # volumes:
+      #   - name: adapters
+      #     persistentVolumeClaim:
+      #       claimName: MODEL_NAME-adapters

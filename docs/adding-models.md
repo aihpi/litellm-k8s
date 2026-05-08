@@ -234,6 +234,109 @@ The first deploy took ~30 minutes because the model weights (~70 GiB) had to be 
 - [ ] Model registered with LiteLLM (UI or script)
 - [ ] `curl` test returns a valid response
 
+## LoRA adapters (optional)
+
+vLLM supports serving LoRA adapters on top of a base model, both **preloaded at startup** (`--lora-modules NAME=path`) and **runtime-loaded** via `POST /v1/load_lora_adapter`. Adapters can be sourced from a Hugging Face repo ID or a local path on a mounted PVC.
+
+Currently enabled on: `ministral-3-14b`, `gpt-oss-120b`.
+
+### Enabling on a new model
+
+Add these to the deployment's vLLM `args`:
+
+```yaml
+- "--enable-lora"
+- "--max-loras"
+- "4"        # 4 on H100 (80GB), 2 on A30 (24GB) — sized to leave KV cache headroom
+- "--max-lora-rank"
+- "64"
+# Optional preloads (also accepts HF repo IDs):
+# - "--lora-modules"
+# - "my-adapter=/adapters/my-adapter"
+```
+
+And this env var to allow runtime load/unload:
+
+```yaml
+- name: VLLM_ALLOW_RUNTIME_LORA_UPDATING
+  value: "true"
+```
+
+`max-loras × max-lora-rank` is what governs the GPU memory pre-allocated for adapter slots. On 24 GB cards (A30) running at `--gpu-memory-utilization 0.95`, start with `max-loras: 2` and watch vLLM's KV cache utilization log line under load before bumping.
+
+### Adapter PVC convention
+
+Add a `<model>-adapters` PVC (`storageClassName: nfs-csi`, `ReadWriteMany`) and mount it at `/adapters`:
+
+```yaml
+volumeMounts:
+  - name: adapters
+    mountPath: /adapters
+volumes:
+  - name: adapters
+    persistentVolumeClaim:
+      claimName: <model>-adapters
+```
+
+RWX means you can drop adapter files onto the PVC from a temporary debug pod without bouncing the model pod.
+
+### Getting adapter weights onto the PVC
+
+Spin up a one-shot pod that mounts the adapters PVC, then `kubectl cp` into it:
+
+```bash
+kubectl -n litellm run nfs-tools --rm -it --restart=Never \
+  --image=busybox \
+  --overrides='{"spec":{"containers":[{"name":"nfs-tools","image":"busybox","stdin":true,"tty":true,"volumeMounts":[{"name":"a","mountPath":"/adapters"}]}],"volumes":[{"name":"a","persistentVolumeClaim":{"claimName":"ministral-3-14b-adapters"}}]}}'
+
+# in another terminal:
+kubectl -n litellm cp ./my-adapter-dir nfs-tools:/adapters/my-adapter
+```
+
+Adapter dirs should contain the standard PEFT layout (`adapter_config.json`, `adapter_model.safetensors`).
+
+### Runtime load and unload
+
+```bash
+kubectl -n litellm port-forward svc/ministral-3-14b-service 8000:8000 &
+
+# load from a HF repo:
+curl -sS http://localhost:8000/v1/load_lora_adapter \
+  -H 'Content-Type: application/json' \
+  -d '{"lora_name":"my-adapter","lora_path":"hf-user/some-public-lora"}'
+
+# load from the PVC:
+curl -sS http://localhost:8000/v1/load_lora_adapter \
+  -H 'Content-Type: application/json' \
+  -d '{"lora_name":"my-adapter","lora_path":"/adapters/my-adapter"}'
+
+# unload:
+curl -sS http://localhost:8000/v1/unload_lora_adapter \
+  -H 'Content-Type: application/json' \
+  -d '{"lora_name":"my-adapter"}'
+```
+
+Use the loaded `lora_name` as the `model` field in subsequent chat completions.
+
+### Health check: which adapters are currently loaded?
+
+After a pod restart, runtime-loaded adapters are gone (the model cache PVC keeps the *downloaded weights*, but vLLM's loaded-adapter list is in-memory). To check current state:
+
+```bash
+kubectl -n litellm port-forward svc/ministral-3-14b-service 8000:8000 &
+curl -sS http://localhost:8000/v1/models | jq '.data[].id'
+```
+
+The list contains the base served-model-name plus every currently-loaded adapter name. Compare against your expected set and re-load anything missing. Preloading via `--lora-modules` is the way to make a specific adapter survive restarts.
+
+### Registering a LoRA-served name with LiteLLM
+
+Each adapter can be registered as a separate `model_list` entry pointing at the same vLLM service. There's a commented example in `base/litellm/configmap.yaml`; either add an entry there or register at runtime via the LiteLLM UI / `add-model.sh` (the `served-model-name` you give LiteLLM must match the `lora_name` exposed by vLLM).
+
+### Security note
+
+`POST /v1/load_lora_adapter` and `POST /v1/unload_lora_adapter` are **unauthenticated** on the cluster network. Any pod that can reach the vLLM service can load an arbitrary adapter and shift model behavior. Acceptable today because the `litellm` namespace is locked down, but should be revisited (NetworkPolicy, Authentik-fronted ingress, or a vLLM auth flag once available) before any broader exposure. Track as a hardening follow-up.
+
 ## Troubleshooting
 
 | Symptom                           | Cause                                | Fix                                              |

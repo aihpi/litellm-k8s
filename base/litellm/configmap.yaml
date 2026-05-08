@@ -30,3 +30,11 @@ data:
         model_info:
           metadata:
             mode: embedding
+      # Example: registering a LoRA adapter served by vLLM as a separate model entry.
+      # The served-model-name must match what vLLM exposes (preloaded via
+      # --lora-modules NAME=path, or runtime-loaded via /v1/load_lora_adapter).
+      # - model_name: ministral-3-14b-my-adapter
+      #   litellm_params:
+      #     model: openai/ministral-3-14b-my-adapter
+      #     api_base: http://ministral-3-14b-service:8000/v1
+      #     api_key: dummy
