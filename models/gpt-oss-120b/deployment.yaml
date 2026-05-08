@@ -18,7 +18,7 @@ spec:
         accelerator: h100
       containers:
         - name: vllm
-          image: vllm/vllm-openai:latest-cu130
+          image: vllm/vllm-openai@sha256:04563c302537a91aa49ebdfbceda96111c5712275999b7e8804fa598f0b5641d
           args:
             - "--model"
             - "openai/gpt-oss-120b"
@@ -29,10 +29,19 @@ spec:
             - "--tensor-parallel-size"
             - "1"
             - "--tool-call-parser"
-            - "openai" 
+            - "openai"
             - "--enable-auto-tool-choice"
             - "--gpu-memory-utilization"
             - "0.90"
+            - "--enable-lora"
+            - "--max-loras"
+            - "4"
+            - "--max-lora-rank"
+            - "64"
+            # Preload static adapters by uncommenting and listing name=path pairs.
+            # Paths may be /adapters/<dir> (PVC) or HF repo IDs (e.g. user/my-lora).
+            # - "--lora-modules"
+            # - "my-adapter=/adapters/my-adapter"
             - "--port"
             - "8000"
           ports:
@@ -45,11 +54,15 @@ spec:
                 secretKeyRef:
                   name: litellm-secret
                   key: HF_TOKEN
+            - name: VLLM_ALLOW_RUNTIME_LORA_UPDATING
+              value: "true"
           volumeMounts:
             - name: model-cache
               mountPath: /root/.cache/huggingface
             - name: vllm-config
               mountPath: /etc/vllm
+            - name: adapters
+              mountPath: /adapters
           resources:
             limits:
               nvidia.com/gpu: "1"
@@ -66,3 +79,6 @@ spec:
         - name: vllm-config
           configMap:
             name: gpt-oss-120b-config
+        - name: adapters
+          persistentVolumeClaim:
+            claimName: gpt-oss-120b-adapters
