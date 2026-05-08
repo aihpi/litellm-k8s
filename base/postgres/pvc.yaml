@@ -3,7 +3,7 @@ kind: PersistentVolumeClaim
 metadata:
   name: postgres-pvc
 spec:
-  storageClassName: nfs-csi
+  storageClassName: nfs-k8s-general
   accessModes:
     - ReadWriteOnce
   resources:

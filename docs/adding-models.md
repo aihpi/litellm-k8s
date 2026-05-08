@@ -266,7 +266,7 @@ And this env var to allow runtime load/unload:
 
 ### Adapter PVC convention
 
-Add a `<model>-adapters` PVC (`storageClassName: nfs-csi`, `ReadWriteMany`) and mount it at `/adapters`:
+Add a `<model>-adapters` PVC (`storageClassName: nfs-k8s-general`, `ReadWriteMany`) and mount it at `/adapters`:
 
 ```yaml
 volumeMounts:
