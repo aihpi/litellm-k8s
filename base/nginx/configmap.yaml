@@ -29,7 +29,7 @@ data:
         # trailing-slash). Otherwise nginx builds an absolute URL using the listen port
         # 4100, which doesn't match what the LB/Caddy expose to clients and leaks the
         # wrong port back to the browser.
-        absolute_redirect off;
+        #  absolute_redirect off;
 
         location = /metrics { return 403; }
         location ^~ /metrics/ { return 403; }
@@ -38,7 +38,7 @@ data:
         # LiteLLM otherwise emits an absolute Location header built from the inbound
         # Host (the cluster IP/port pair), which is unreachable from the public LB.
         # With absolute_redirect off above, this 301 carries only the path.
-        location = /ui { return 301 /ui/; }
+        #  location = /ui { return 301 /ui/; }
 
         if ($request_method = HEAD) {
             return 200;
