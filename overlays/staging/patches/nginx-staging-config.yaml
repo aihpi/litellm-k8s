@@ -34,6 +34,12 @@ data:
         location = /metrics { return 403; }
         location ^~ /metrics/ { return 403; }
 
+        # Short-circuit /ui -> /ui/ in nginx so LiteLLM never sees the no-slash form.
+        # LiteLLM otherwise emits an absolute Location header built from the inbound
+        # Host (the cluster IP/port pair), which is unreachable from the public LB.
+        # With absolute_redirect off above, this 301 carries only the path.
+        location = /ui { return 301 /ui/; }
+
         if ($request_method = HEAD) {
             return 200;
         }
