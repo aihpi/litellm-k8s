@@ -33,13 +33,16 @@ spec:
             - "--enable-auto-tool-choice"
             - "--gpu-memory-utilization"
             - "0.90"
-            - "--enable-lora"
-            - "--max-loras"
-            - "4"
-            - "--max-lora-rank"
-            - "64"
-            # Preload static adapters by uncommenting and listing name=path pairs.
-            # Paths may be /adapters/<dir> (PVC) or HF repo IDs (e.g. user/my-lora).
+            # LoRA is disabled on gpt-oss-120b pending MoE+LoRA compatibility
+            # verification on the pinned vLLM digest (Phase 0.3 of the LoRA plan).
+            # Re-enable by uncommenting the four flags below, restoring the
+            # adapters volume/mount and env var, and re-adding the
+            # gpt-oss-120b-adapters PVC in pvc.yaml.
+            # - "--enable-lora"
+            # - "--max-loras"
+            # - "4"
+            # - "--max-lora-rank"
+            # - "64"
             # - "--lora-modules"
             # - "my-adapter=/adapters/my-adapter"
             - "--port"
@@ -54,15 +57,16 @@ spec:
                 secretKeyRef:
                   name: litellm-secret
                   key: HF_TOKEN
-            - name: VLLM_ALLOW_RUNTIME_LORA_UPDATING
-              value: "true"
+            # Re-enable alongside the --enable-lora args above.
+            # - name: VLLM_ALLOW_RUNTIME_LORA_UPDATING
+            #   value: "true"
           volumeMounts:
             - name: model-cache
               mountPath: /root/.cache/huggingface
             - name: vllm-config
               mountPath: /etc/vllm
-            - name: adapters
-              mountPath: /adapters
+            # - name: adapters
+            #   mountPath: /adapters
           resources:
             limits:
               nvidia.com/gpu: "1"
@@ -79,6 +83,6 @@ spec:
         - name: vllm-config
           configMap:
             name: gpt-oss-120b-config
-        - name: adapters
-          persistentVolumeClaim:
-            claimName: gpt-oss-120b-adapters
+        # - name: adapters
+        #   persistentVolumeClaim:
+        #     claimName: gpt-oss-120b-adapters
