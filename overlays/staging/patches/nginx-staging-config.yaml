@@ -25,6 +25,12 @@ data:
       server {
         listen 4000;
 
+        # Emit relative Location headers on nginx-generated redirects (e.g. /ui -> /ui/
+        # trailing-slash). Otherwise nginx builds an absolute URL using the listen port
+        # 4000, but the LoadBalancer fronts this on port 80, so the redirected URL
+        # leaks the wrong port back to the browser.
+        absolute_redirect off;
+
         location = /metrics { return 403; }
         location ^~ /metrics/ { return 403; }
 
