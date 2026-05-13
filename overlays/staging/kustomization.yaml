@@ -17,6 +17,26 @@ patches:
   - path: patches/postgres-staging-pvc.yaml
   - path: patches/nginx-staging-config.yaml
   - path: patches/nginx-staging-service.yaml
+  # Staging keeps nginx-proxy on port 4000 (base/prod moved to 4100).
+  # JSON 6902 instead of strategic merge — strategic merge appends new port
+  # entries instead of replacing them when port numbers differ.
+  - target:
+      kind: Service
+      name: nginx-proxy
+    patch: |-
+      - op: replace
+        path: /spec/ports/0/port
+        value: 4000
+      - op: replace
+        path: /spec/ports/0/targetPort
+        value: 4000
+  - target:
+      kind: Deployment
+      name: nginx-proxy
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/ports/0/containerPort
+        value: 4000
 
 replicas:
   - name: litellm-proxy

@@ -16,7 +16,7 @@ spec:
         - name: nginx
           image: nginx:1.27-alpine
           ports:
-            - containerPort: 4000 # Changed from 80
+            - containerPort: 4100
           volumeMounts:
             - name: nginx-config
               mountPath: /etc/nginx/nginx.conf

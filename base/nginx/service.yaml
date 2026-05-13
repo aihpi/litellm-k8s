@@ -8,6 +8,6 @@ spec:
     app: nginx-proxy
   ports:
     - name: http
-      port: 4000       # Match the original external port
-      targetPort: 4000 # Match the Nginx containerPort
+      port: 4100       # External port exposed by the LoadBalancer
+      targetPort: 4100 # Matches the nginx containerPort
       protocol: TCP

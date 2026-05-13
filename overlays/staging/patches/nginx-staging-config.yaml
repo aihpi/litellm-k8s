@@ -27,7 +27,7 @@ data:
 
         # Emit relative Location headers on nginx-generated redirects (e.g. /ui -> /ui/
         # trailing-slash). Otherwise nginx builds an absolute URL using the listen port
-        # 4000, but the LoadBalancer fronts this on port 80, so the redirected URL
+        # 4000 (staging), which doesn't match what the LB/Caddy expose to clients and
         # leaks the wrong port back to the browser.
         absolute_redirect off;
 

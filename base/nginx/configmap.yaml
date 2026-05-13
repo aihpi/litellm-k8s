@@ -23,12 +23,12 @@ data:
         server litellm-service.litellm.svc.cluster.local:4000;
       }
       server {
-        listen 4000;
+        listen 4100;
 
         # Emit relative Location headers on nginx-generated redirects (e.g. /ui -> /ui/
         # trailing-slash). Otherwise nginx builds an absolute URL using the listen port
-        # 4000, but the LoadBalancer fronts this on port 80, so the redirected URL
-        # leaks the wrong port back to the browser.
+        # 4100, which doesn't match what the LB/Caddy expose to clients and leaks the
+        # wrong port back to the browser.
         absolute_redirect off;
 
         location = /metrics { return 403; }
