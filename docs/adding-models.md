@@ -280,6 +280,14 @@ volumes:
 
 RWX means you can drop adapter files onto the PVC from a temporary debug pod without bouncing the model pod.
 
+### Auto-discovery wrapper (preload everything on the PVC)
+
+Instead of hand-maintaining a `--lora-modules name=path` list in the deployment YAML, the vLLM container can be wrapped in a small shell script that scans `/adapters/*/` at startup and synthesizes the flag automatically. Each subdirectory becomes a preloaded adapter whose served `lora_name` is the directory name.
+
+[models/ministral-3-14b/deployment.yaml](../models/ministral-3-14b/deployment.yaml) is the live example. The wrapper sets `command: ["/bin/bash", "-c"]` and the `args` body runs the scan, then `exec`s `python -m vllm.entrypoints.openai.api_server …` with the discovered list spliced in. If `/adapters` is empty, the flag is omitted and vLLM starts normally.
+
+Use it when you'd otherwise be churning the YAML every time an adapter is added, or when you want adapters dropped onto the PVC to **survive pod restarts** — preloaded adapters do, runtime-loaded ones (see [Health check](#health-check-which-adapters-are-currently-loaded) below) don't. The trade-off: adapter directory names become the served `lora_name` verbatim, and whitespace in names will break the wrapper (it relies on shell word-splitting). `VLLM_ALLOW_RUNTIME_LORA_UPDATING=true` still works alongside it for hot-loading between restarts.
+
 ### Getting adapter weights onto the PVC
 
 Spin up a one-shot pod that mounts the adapters PVC, then `kubectl cp` into it:

@@ -36,6 +36,31 @@ spec:
             # - "64"
             # - "--lora-modules"
             # - "my-adapter=/adapters/my-adapter"
+            #
+            # Alternative: replace the static args list with a shell wrapper that
+            # auto-discovers every subdirectory under /adapters and registers it
+            # as --lora-modules <name>=<path>. See models/ministral-3-14b/deployment.yaml
+            # for the live example. Use this when you'd otherwise be hand-maintaining
+            # a long --lora-modules list, or want adapters dropped onto the PVC to
+            # survive pod restarts without manual /v1/load_lora_adapter calls.
+            # Shape:
+            #   command: ["/bin/bash", "-c"]
+            #   args:
+            #     - |
+            #       LORA_ARGS=""
+            #       if [ -d /adapters ]; then
+            #         for dir in /adapters/*/; do
+            #           [ -d "$dir" ] && LORA_ARGS="${LORA_ARGS} $(basename "$dir")=${dir}"
+            #         done
+            #       fi
+            #       LORA_MODULE_FLAG=""
+            #       [ -n "$LORA_ARGS" ] && LORA_MODULE_FLAG="--lora-modules $LORA_ARGS"
+            #       exec python -m vllm.entrypoints.openai.api_server \
+            #         --model MODEL_ID --served-model-name MODEL_NAME \
+            #         --enable-lora --max-loras 4 --max-lora-rank 64 \
+            #         $LORA_MODULE_FLAG --port PORT
+            # Trade-off: adapter directory names become the served lora_name verbatim,
+            # and whitespace in names will break the wrapper (relies on word-splitting).
             - "--port"
             - "PORT"
           ports:
