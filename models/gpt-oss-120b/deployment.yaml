@@ -33,10 +33,19 @@ spec:
             - "--enable-auto-tool-choice"
             - "--gpu-memory-utilization"
             - "0.90"
-            # LoRA is disabled on gpt-oss-120b pending MoE+LoRA compatibility
-            # verification on the pinned vLLM digest (Phase 0.3 of the LoRA plan).
-            # Re-enable by uncommenting the four flags below, restoring the
-            # adapters volume/mount and env var, and re-adding the
+            # LoRA is disabled on gpt-oss-120b due to a confirmed MoE+LoRA bug
+            # in the pinned vLLM digest (v0.20.0 NVIDIA Hopper-preview build,
+            # sha256:04563c30...). Attempted re-enablement on 2026-05-28
+            # (commit 1862f63, reverted in b377f30) crashed during warmup with:
+            #   File ".../vllm/lora/layers/fused_moe.py", line 263, in reset_lora
+            #     self.adapter_enabled[index] = 0
+            #   torch.AcceleratorError: CUDA error: unspecified launch failure
+            # i.e. out-of-bounds GPU array access in the fused MoE LoRA path.
+            # Reducing max-loras/max-lora-rank or gpu-memory-utilization will
+            # NOT help — it's a kernel-level bug, not OOM. Next attempt should
+            # bump the vllm/vllm-openai image digest before re-trying these
+            # flags. Re-enable by uncommenting the args below, restoring the
+            # adapters volume/mount + env var, and re-adding the
             # gpt-oss-120b-adapters PVC in pvc.yaml.
             # - "--enable-lora"
             # - "--max-loras"
