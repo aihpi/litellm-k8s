@@ -6,13 +6,14 @@ import tempfile
 import uuid
 from pathlib import Path
 
-from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, Header, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse
 
 from . import audit, litellm_client, validation, vllm_client
 from .config import (
     ADAPTERS_BASE_PATH,
     ALLOWED_BASE_MODELS,
+    LOG_HEADERS_ON_UPLOAD,
     MAX_UPLOAD_BYTES,
     REQUIRE_IDENTITY_HEADERS,
 )
@@ -24,15 +25,41 @@ app = FastAPI(title="lora-manager", version="0.1.0")
 
 
 def _identity(
+    request: Request,
     x_litellm_user_id: str | None,
     x_litellm_key_alias: str | None,
 ) -> tuple[str, str]:
-    if REQUIRE_IDENTITY_HEADERS and not x_litellm_user_id:
+    if LOG_HEADERS_ON_UPLOAD:
+        # Redact bearer tokens before logging.
+        safe = {
+            k: ("Bearer <redacted>" if k.lower() == "authorization" else v)
+            for k, v in request.headers.items()
+        }
+        log.info("incoming /upload headers: %s", safe)
+
+    # Best-effort identity. Try the documented LiteLLM headers first, then a
+    # few alternate spellings we've seen in different versions, then fall back
+    # to "anonymous" if we genuinely have nothing.
+    user_id = (
+        x_litellm_user_id
+        or request.headers.get("x-litellm-user-id")
+        or request.headers.get("x-litellm-user")
+        or request.headers.get("x-user-id")
+        or "anonymous"
+    )
+    key_alias = (
+        x_litellm_key_alias
+        or request.headers.get("x-litellm-key-alias")
+        or request.headers.get("x-litellm-key-name")
+        or "anonymous"
+    )
+
+    if REQUIRE_IDENTITY_HEADERS and user_id == "anonymous":
         raise HTTPException(
             status_code=401,
-            detail="missing x-litellm-user-id header — request must go through LiteLLM pass-through",
+            detail="missing user identity header — request must go through LiteLLM pass-through",
         )
-    return (x_litellm_user_id or "unknown", x_litellm_key_alias or "unknown")
+    return (user_id, key_alias)
 
 
 def _check_base_model(base_model: str) -> None:
@@ -54,6 +81,7 @@ async def health() -> dict:
 
 @app.post("/upload")
 async def upload(
+    request: Request,
     name: str = Form(...),
     base_model: str = Form(...),
     adapter: UploadFile = File(...),
@@ -61,7 +89,7 @@ async def upload(
     x_litellm_user_id: str | None = Header(None),
     x_litellm_key_alias: str | None = Header(None),
 ) -> JSONResponse:
-    user_id, key_alias = _identity(x_litellm_user_id, x_litellm_key_alias)
+    user_id, key_alias = _identity(request, x_litellm_user_id, x_litellm_key_alias)
     _check_base_model(base_model)
     try:
         validation.validate_name(name)
@@ -196,12 +224,13 @@ async def list_adapters() -> dict:
 
 @app.delete("/adapters/{base_model}/{name}")
 async def delete_adapter(
+    request: Request,
     base_model: str,
     name: str,
     x_litellm_user_id: str | None = Header(None),
     x_litellm_key_alias: str | None = Header(None),
 ) -> dict:
-    user_id, key_alias = _identity(x_litellm_user_id, x_litellm_key_alias)
+    user_id, key_alias = _identity(request, x_litellm_user_id, x_litellm_key_alias)
     _check_base_model(base_model)
     try:
         validation.validate_name(name)
