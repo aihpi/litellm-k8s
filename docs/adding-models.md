@@ -288,9 +288,37 @@ Instead of hand-maintaining a `--lora-modules name=path` list in the deployment 
 
 Use it when you'd otherwise be churning the YAML every time an adapter is added, or when you want adapters dropped onto the PVC to **survive pod restarts** — preloaded adapters do, runtime-loaded ones (see [Health check](#health-check-which-adapters-are-currently-loaded) below) don't. The trade-off: adapter directory names become the served `lora_name` verbatim, and whitespace in names will break the wrapper (it relies on shell word-splitting). `VLLM_ALLOW_RUNTIME_LORA_UPDATING=true` still works alongside it for hot-loading between restarts.
 
-### Getting adapter weights onto the PVC
+### Uploading adapters with lora-manager (preferred)
 
-Spin up a one-shot pod that mounts the adapters PVC, then `kubectl cp` into it:
+The internal [lora-manager](../base/lora-manager/) service accepts adapter uploads via HTTP and handles validation, PVC writes, vLLM hot-load, and LiteLLM registration in one round-trip. It's reachable via the existing LiteLLM ingress at `/v1/lora/upload`, authenticated with the caller's regular `sk-...` API key (no master key needed).
+
+From anywhere that can reach the public LiteLLM ingress — including SLURM hosts that don't have kubectl access:
+
+```bash
+tar czf /tmp/my-adapter.tar.gz -C /path/to/adapter .
+curl -sS -X POST https://api.aisc.hpi.de/v1/lora/upload \
+  -H "Authorization: Bearer sk-..." \
+  -F "name=my-adapter" \
+  -F "base_model=ministral-3-14b" \
+  -F "adapter=@/tmp/my-adapter.tar.gz"
+# Optional: -F "access=team-foo" to restrict to a LiteLLM access group.
+```
+
+The archive must contain a valid PEFT LoRA adapter (`adapter_config.json` with `peft_type: LORA` and `r <= 64`, plus `*.safetensors` weights). Pickled `.bin` weights are rejected — safetensors only. The name becomes both the vLLM `lora_name` and the LiteLLM `model_name`, so the same `sk-...` key can immediately call:
+
+```bash
+curl https://api.aisc.hpi.de/v1/chat/completions \
+  -H "Authorization: Bearer sk-..." \
+  -d '{"model": "my-adapter", "messages": [{"role": "user", "content": "Hi"}]}'
+```
+
+To list uploaded adapters: `GET /v1/lora/adapters` with the same auth header. To remove one: `DELETE /v1/lora/adapters/{base_model}/{name}` (currently requires cluster-internal access).
+
+**Access groups are mandatory at upload time** if you want the adapter to be visible only to specific keys. LiteLLM cannot retrofit per-key visibility after registration — see [docs/plans/lora-adapter-upload-service.md](plans/lora-adapter-upload-service.md) for the rationale. Omit `access` to make the adapter visible to every LiteLLM key.
+
+### Getting adapter weights onto the PVC (fallback)
+
+For cases where lora-manager isn't available (different base model not in its allowlist, debugging, etc.) — spin up a one-shot pod that mounts the adapters PVC, then `kubectl cp` into it:
 
 ```bash
 kubectl -n litellm run nfs-tools --rm -it --restart=Never \
