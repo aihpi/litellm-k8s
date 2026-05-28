@@ -12,8 +12,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app/ ./app/
 
-RUN useradd --uid 1000 --create-home --no-log-init app && chown -R app:app /app
-USER app
+# Runs as root so it can write to the adapters PVC, which inherits root
+# ownership from the vLLM container that originally populates it. Acceptable
+# because the service is ClusterIP-only and reachable only through LiteLLM's
+# pass-through (already authenticated). Matches the existing aihpi tool-* image
+# convention (kisz-auth-wrapper, tool-litellm).
 
 EXPOSE 8000
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
