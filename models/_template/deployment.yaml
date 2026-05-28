@@ -55,7 +55,7 @@ spec:
             #       fi
             #       LORA_MODULE_FLAG=""
             #       [ -n "$LORA_ARGS" ] && LORA_MODULE_FLAG="--lora-modules $LORA_ARGS"
-            #       exec python -m vllm.entrypoints.openai.api_server \
+            #       exec python3 -m vllm.entrypoints.openai.api_server \
             #         --model MODEL_ID --served-model-name MODEL_NAME \
             #         --enable-lora --max-loras 4 --max-lora-rank 64 \
             #         $LORA_MODULE_FLAG --port PORT
