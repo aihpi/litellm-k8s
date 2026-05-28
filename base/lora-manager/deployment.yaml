@@ -33,7 +33,7 @@ spec:
               value: /adapters
             - name: ALLOWED_BASE_MODELS
               # Add new LoRA-enabled base models here AND mount their adapters PVC below.
-              value: ministral-3-14b
+              value: ministral-3-14b,gpt-oss-120b
             - name: MAX_UPLOAD_BYTES
               value: "4294967296"
             - name: MAX_LORA_RANK
@@ -41,6 +41,8 @@ spec:
           volumeMounts:
             - name: ministral-3-14b-adapters
               mountPath: /adapters/ministral-3-14b
+            - name: gpt-oss-120b-adapters
+              mountPath: /adapters/gpt-oss-120b
           readinessProbe:
             httpGet:
               path: /health
@@ -64,3 +66,6 @@ spec:
         - name: ministral-3-14b-adapters
           persistentVolumeClaim:
             claimName: ministral-3-14b-adapters
+        - name: gpt-oss-120b-adapters
+          persistentVolumeClaim:
+            claimName: gpt-oss-120b-adapters
