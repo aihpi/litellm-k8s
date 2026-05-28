@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lora-manager
+  labels:
+    app: lora-manager
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: lora-manager
+  template:
+    metadata:
+      labels:
+        app: lora-manager
+    spec:
+      containers:
+        - name: lora-manager
+          image: ghcr.io/aihpi/tool-lora-manager:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            - name: LITELLM_MASTER_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: litellm-secret
+                  key: LITELLM_MASTER_KEY
+            - name: LITELLM_URL
+              value: http://litellm-service:4000
+            - name: ADAPTERS_BASE_PATH
+              value: /adapters
+            - name: ALLOWED_BASE_MODELS
+              # Add new LoRA-enabled base models here AND mount their adapters PVC below.
+              value: ministral-3-14b
+            - name: MAX_UPLOAD_BYTES
+              value: "4294967296"
+            - name: MAX_LORA_RANK
+              value: "64"
+          volumeMounts:
+            - name: ministral-3-14b-adapters
+              mountPath: /adapters/ministral-3-14b
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+      volumes:
+        - name: ministral-3-14b-adapters
+          persistentVolumeClaim:
+            claimName: ministral-3-14b-adapters

@@ -15,3 +15,5 @@ resources:
   - litellm/service.yaml
   - qdrant/deployment.yaml
   - qdrant/service.yaml
+  - lora-manager/deployment.yaml
+  - lora-manager/service.yaml

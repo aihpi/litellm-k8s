@@ -1,0 +1,42 @@
+name: Build lora-manager image
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "base/lora-manager/app/**"
+      - "base/lora-manager/Dockerfile"
+      - "base/lora-manager/requirements.txt"
+      - ".github/workflows/build-lora-manager.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: base/lora-manager
+          push: true
+          tags: |
+            ghcr.io/aihpi/tool-lora-manager:latest
+            ghcr.io/aihpi/tool-lora-manager:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
