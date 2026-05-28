@@ -9,15 +9,18 @@ spec:
   resources:
     requests:
       storage: 200Gi
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: gpt-oss-120b-adapters
-spec:
-  accessModes:
-    - ReadWriteMany
-  storageClassName: nfs-k8s-general
-  resources:
-    requests:
-      storage: 50Gi
+# Adapters PVC commented out alongside the LoRA disablement in
+# deployment.yaml. Re-add when MoE+LoRA support is verified on the
+# pinned vLLM digest.
+# ---
+# apiVersion: v1
+# kind: PersistentVolumeClaim
+# metadata:
+#   name: gpt-oss-120b-adapters
+# spec:
+#   accessModes:
+#     - ReadWriteMany
+#   storageClassName: nfs-k8s-general
+#   resources:
+#     requests:
+#       storage: 50Gi
