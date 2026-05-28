@@ -10,6 +10,22 @@ data:
       success_callback: ["prometheus"]
       require_auth_for_metrics_endpoint: false
 
+    general_settings:
+      # Routes the user-facing /v1/lora/* paths to the internal lora-manager
+      # service. `auth: true` gates on the caller's LiteLLM API key (rather
+      # than master-only). `forward_headers: true` makes LiteLLM pass user
+      # identity headers (x-litellm-user-id, x-litellm-key-alias) downstream
+      # so lora-manager can attribute uploads.
+      pass_through_endpoints:
+        - path: "/v1/lora/upload"
+          target: "http://lora-manager:8000/upload"
+          auth: true
+          forward_headers: true
+        - path: "/v1/lora/adapters"
+          target: "http://lora-manager:8000/adapters"
+          auth: true
+          forward_headers: true
+
     model_list:
       - model_name: llama-3b
         litellm_params:
