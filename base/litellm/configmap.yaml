@@ -46,6 +46,11 @@ data:
         model_info:
           metadata:
             mode: embedding
+      - model_name: gemma-4-31b
+        litellm_params:
+          model: openai/gemma-4-31b
+          api_base: http://gemma-4-31b-service:8000/v1
+          api_key: dummy
       # Example: registering a LoRA adapter served by vLLM as a separate model entry.
       # The served-model-name must match what vLLM exposes (preloaded via
       # --lora-modules NAME=path, or runtime-loaded via /v1/load_lora_adapter).

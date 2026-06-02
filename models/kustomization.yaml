@@ -34,3 +34,6 @@ resources:
   - qwen3-omni/pvc.yaml
   - qwen3-omni/deployment.yaml
   - qwen3-omni/service.yaml
+  - gemma-4-31b/pvc.yaml
+  - gemma-4-31b/deployment.yaml
+  - gemma-4-31b/service.yaml
