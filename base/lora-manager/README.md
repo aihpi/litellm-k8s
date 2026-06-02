@@ -55,3 +55,5 @@ Anything else fails validation. Safetensors are parsed header-only (no tensor da
 ## Adapter naming
 
 `^[a-z0-9][a-z0-9-]{0,62}$` — lowercase alphanumeric + hyphen, 1-63 chars. This is what becomes the `lora_name` in vLLM and `model_name` in LiteLLM. Whitespace would break the auto-discovery wrapper on the vLLM side.
+
+**Team convention:** prefix with the base model name, e.g. `ministral-3-14b-therapy-depression-v1` or `gemma-4-31b-writing-assistant`. The prefix makes it obvious which base model an adapter belongs to when scanning `/v1/models`. Not enforced by validation — humans agree on it.
