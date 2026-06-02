@@ -22,9 +22,8 @@ spec:
           image: vllm/vllm-openai@sha256:04563c302537a91aa49ebdfbceda96111c5712275999b7e8804fa598f0b5641d
           # Wrapper auto-discovers LoRA adapters under /adapters/ at startup and
           # passes them to vLLM as --lora-modules name=path. Same shape as
-          # ministral-3-14b. Image inputs are blocked at request time via
-          # --limit-mm-per-prompt; the SigLIP vision tower still initializes on
-          # startup (~1-3 GiB GPU tax) — vLLM has no clean knob to fully evict it.
+          # ministral-3-14b. Multimodal: up to 4 images per request — SigLIP
+          # vision tower loads regardless, so we accept image inputs.
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -53,7 +52,7 @@ spec:
                 --max-num-seqs 8 \
                 --max-num-batched-tokens 4096 \
                 --gpu-memory-utilization 0.85 \
-                --limit-mm-per-prompt '{"image": 0}' \
+                --limit-mm-per-prompt '{"image": 4}' \
                 --enable-auto-tool-choice \
                 --reasoning-parser gemma4 \
                 --tool-call-parser gemma4 \
