@@ -37,3 +37,6 @@ resources:
   - gemma-4-31b/pvc.yaml
   - gemma-4-31b/deployment.yaml
   - gemma-4-31b/service.yaml
+  - qwen-3-5-9b/pvc.yaml
+  - qwen-3-5-9b/deployment.yaml
+  - qwen-3-5-9b/service.yaml

@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qwen-3-5-9b
+  labels:
+    app: qwen-3-5-9b
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: qwen-3-5-9b
+  template:
+    metadata:
+      labels:
+        app: qwen-3-5-9b
+    spec:
+      runtimeClassName: nvidia
+      nodeSelector:
+        accelerator: a30
+      containers:
+        - name: vllm
+          image: vllm/vllm-openai@sha256:04563c302537a91aa49ebdfbceda96111c5712275999b7e8804fa598f0b5641d
+          # Wrapper auto-discovers LoRA adapters under /adapters/ at startup and
+          # passes them to vLLM as --lora-modules name=path. Drop a directory onto
+          # the adapters PVC, restart the pod, and it gets preloaded (so it
+          # survives subsequent restarts unlike runtime-loaded adapters).
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              LORA_ARGS=""
+              if [ -d /adapters ]; then
+                for dir in /adapters/*/; do
+                  if [ -d "$dir" ]; then
+                    name=$(basename "$dir")
+                    LORA_ARGS="${LORA_ARGS} ${name}=${dir}"
+                  fi
+                done
+              fi
+
+              LORA_MODULE_FLAG=""
+              if [ -n "$LORA_ARGS" ]; then
+                LORA_MODULE_FLAG="--lora-modules $LORA_ARGS"
+                echo "Auto-discovered LoRA adapters: $LORA_ARGS"
+              fi
+
+              exec python3 -m vllm.entrypoints.openai.api_server \
+                --model cyankiwi/Qwen3.5-9B-AWQ-4bit \
+                --served-model-name qwen-3-5-9b \
+                --quantization awq_marlin \
+                --tensor-parallel-size 1 \
+                --dtype float16 \
+                --max-model-len 32768 \
+                --max-num-seqs 8 \
+                --gpu-memory-utilization 0.95 \
+                --reasoning-parser qwen3 \
+                --tool-call-parser qwen3_coder \
+                --enable-auto-tool-choice \
+                --enable-lora \
+                --max-loras 2 \
+                --max-lora-rank 64 \
+                $LORA_MODULE_FLAG \
+                --port 8000
+          ports:
+            - containerPort: 8000
+          env:
+            - name: HUGGING_FACE_HUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: litellm-secret
+                  key: HF_TOKEN
+            - name: VLLM_ALLOW_RUNTIME_LORA_UPDATING
+              value: "true"
+          volumeMounts:
+            - name: model-cache
+              mountPath: /root/.cache/huggingface
+            - name: adapters
+              mountPath: /adapters
+          resources:
+            limits:
+              nvidia.com/gpu: "1"
+            requests:
+              nvidia.com/gpu: "1"
+      volumes:
+        - name: model-cache
+          persistentVolumeClaim:
+            claimName: qwen-3-5-9b-cache
+        - name: adapters
+          persistentVolumeClaim:
+            claimName: qwen-3-5-9b-adapters

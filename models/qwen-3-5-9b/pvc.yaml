@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: qwen-3-5-9b-cache
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: nfs-k8s-general
+  resources:
+    requests:
+      storage: 50Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: qwen-3-5-9b-adapters
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: nfs-k8s-general
+  resources:
+    requests:
+      storage: 50Gi

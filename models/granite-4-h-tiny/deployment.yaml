@@ -5,7 +5,9 @@ metadata:
   labels:
     app: granite-4-h-tiny
 spec:
-  replicas: 1
+  # Scaled to 0 to free its 1x A30 for qwen-3-5-9b. Set back to 1 to revive
+  # (manifests + LiteLLM registration are intentionally left intact).
+  replicas: 0
   selector:
     matchLabels:
       app: granite-4-h-tiny
