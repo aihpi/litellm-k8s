@@ -33,7 +33,7 @@ spec:
               value: /adapters
             - name: ALLOWED_BASE_MODELS
               # Add new LoRA-enabled base models here AND mount their adapters PVC below.
-              value: ministral-3-14b,gemma-4-31b
+              value: ministral-3-14b,gemma-4-31b,qwen-3-5-9b
             - name: MAX_UPLOAD_BYTES
               value: "4294967296"
             - name: MAX_LORA_RANK
@@ -43,6 +43,8 @@ spec:
               mountPath: /adapters/ministral-3-14b
             - name: gemma-4-31b-adapters
               mountPath: /adapters/gemma-4-31b
+            - name: qwen-3-5-9b-adapters
+              mountPath: /adapters/qwen-3-5-9b
           readinessProbe:
             httpGet:
               path: /health
@@ -69,3 +71,6 @@ spec:
         - name: gemma-4-31b-adapters
           persistentVolumeClaim:
             claimName: gemma-4-31b-adapters
+        - name: qwen-3-5-9b-adapters
+          persistentVolumeClaim:
+            claimName: qwen-3-5-9b-adapters
