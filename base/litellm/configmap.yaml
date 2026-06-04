@@ -56,6 +56,11 @@ data:
           model: openai/qwen-3-5-9b
           api_base: http://qwen-3-5-9b-service:8000/v1
           api_key: dummy
+          # Qwen3.5 enables thinking by default; turn it off proxy-wide.
+          # Callers can re-enable per request by overriding chat_template_kwargs.
+          extra_body:
+            chat_template_kwargs:
+              enable_thinking: false
       # Example: registering a LoRA adapter served by vLLM as a separate model entry.
       # The served-model-name must match what vLLM exposes (preloaded via
       # --lora-modules NAME=path, or runtime-loaded via /v1/load_lora_adapter).
