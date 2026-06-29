@@ -15,19 +15,19 @@ spec:
           imagePullPolicy: Always
           readinessProbe:
             httpGet:
-              path: /litellm/.well-known/litellm-ui-config
+              path: /health/readiness
               port: 4000
             initialDelaySeconds: 5
-            periodSeconds: 5
-            timeoutSeconds: 2
+            periodSeconds: 10
+            timeoutSeconds: 5
             failureThreshold: 6
           env:
             - name: LITELLM_ASSET_PREFIX
               value: /litellm-asset-prefix
           resources:
             requests:
-              cpu: "500m"
-              memory: "512Mi"
+              cpu: "1"
+              memory: "1Gi"
             limits:
-              cpu: "2"
-              memory: "2Gi"
+              cpu: "4"
+              memory: "3Gi"

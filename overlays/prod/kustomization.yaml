@@ -16,7 +16,7 @@ patches:
 
 replicas:
   - name: litellm-proxy
-    count: 1
+    count: 2
 
 images:
   - name: ghcr.io/aihpi/tool-litellm
