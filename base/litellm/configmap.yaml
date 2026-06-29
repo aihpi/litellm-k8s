@@ -10,6 +10,70 @@ data:
       success_callback: ["prometheus"]
       require_auth_for_metrics_endpoint: false
 
+      # Disable per-user budget tracking in Prometheus — avoids a Postgres query
+      # on every /metrics scrape, which was blocking the event loop for 5-23s.
+      enable_end_user_cost_tracking_prometheus_only: false
+
+      # Strip high-cardinality labels (hashed_api_key, user UUID, model_id UUID,
+      # client_ip, user_agent, user_email) from all exported metrics. Without this,
+      # each unique user×key×model combination creates new histogram bucket series,
+      # causing the /metrics payload to grow unboundedly until the pod is restarted.
+      # The list format (group/metrics/include_labels) is required by LiteLLM's
+      # PrometheusMetricsConfig schema — a flat dict causes a startup crash.
+      prometheus_metrics_config:
+        - group: latency_histograms
+          metrics:
+            - litellm_request_total_latency_metric
+            - litellm_llm_api_latency_metric
+            - litellm_llm_api_time_to_first_token_metric
+            - litellm_request_queue_time_seconds
+          include_labels:
+            - model
+            - requested_model
+            - api_key_alias
+            - team_alias
+        - group: overhead_latency
+          metrics:
+            - litellm_overhead_latency_metric
+          include_labels:
+            - litellm_model_name
+            - api_key_alias
+        - group: deployment_latency
+          metrics:
+            - litellm_deployment_latency_per_output_token
+          include_labels:
+            - litellm_model_name
+            - api_key_alias
+            - team_alias
+        - group: token_spend_metrics
+          metrics:
+            - litellm_input_tokens_metric
+            - litellm_output_tokens_metric
+            - litellm_total_tokens_metric
+            - litellm_spend_metric
+            - litellm_requests_metric
+          include_labels:
+            - model
+            - api_key_alias
+            - team_alias
+        - group: request_counters
+          metrics:
+            - litellm_proxy_total_requests_metric
+          include_labels:
+            - requested_model
+            - api_key_alias
+            - team_alias
+            - status_code
+        - group: deployment_counters
+          metrics:
+            - litellm_deployment_total_requests
+            - litellm_deployment_success_responses
+          include_labels:
+            - requested_model
+            - litellm_model_name
+            - api_key_alias
+            - team_alias
+
     general_settings:
       # Routes the user-facing /v1/lora/* paths to the internal lora-manager
       # service. `auth: true` gates on the caller's LiteLLM API key (rather
@@ -61,6 +125,16 @@ data:
           extra_body:
             chat_template_kwargs:
               enable_thinking: false
+      - model_name: gpt-oss-120b
+        litellm_params:
+          model: openai/gpt-oss-120b
+          api_base: http://gpt-oss-120b-service:8000/v1
+          api_key: dummy
+      - model_name: llama-3-3-70b
+        litellm_params:
+          model: openai/llama-3-3-70b
+          api_base: http://llama-3-3-70b-service:8000/v1
+          api_key: dummy
       # Example: registering a LoRA adapter served by vLLM as a separate model entry.
       # The served-model-name must match what vLLM exposes (preloaded via
       # --lora-modules NAME=path, or runtime-loaded via /v1/load_lora_adapter).
