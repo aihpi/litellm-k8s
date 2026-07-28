@@ -60,6 +60,7 @@ async def _identity(
     request: Request,
     x_litellm_user_id: str | None,
     x_litellm_key_alias: str | None,
+    require: bool | None = None,
 ) -> Identity:
     """Who is calling.
 
@@ -68,7 +69,15 @@ async def _identity(
     forged by anything able to reach this service inside the namespace whereas a
     key has to survive LiteLLM's own validation. Headers remain a fallback for
     direct in-cluster callers that have no key.
+
+    `require` overrides REQUIRE_IDENTITY. The in-cluster routes pass False: they
+    are reachable only via kubectl exec / port-forward, and refusing an
+    unidentified caller there would close the ops escape hatch for adapters that
+    have no owner — the one case where those routes exist at all. They still get
+    Identity("anonymous", ...), which is never ops.
     """
+    if require is None:
+        require = REQUIRE_IDENTITY
     if LOG_HEADERS_ON_UPLOAD:
         # Redact bearer tokens before logging.
         safe = {
@@ -111,7 +120,7 @@ async def _identity(
         or "anonymous"
     )
 
-    if REQUIRE_IDENTITY and user_id == "anonymous":
+    if require and user_id == "anonymous":
         raise HTTPException(
             status_code=401,
             detail="could not determine caller identity from the API key — an "
@@ -436,8 +445,15 @@ async def delete_adapter(
     x_litellm_key_alias: str | None = Header(None),
 ) -> dict:
     """In-cluster admin delete. No ownership check — reachable only from inside
-    the namespace (kubectl port-forward / exec), which is the existing posture."""
-    ident = await _identity(request, x_litellm_user_id, x_litellm_key_alias)
+    the namespace (kubectl port-forward / exec), which is the existing posture.
+
+    Identity is recorded when available but not required: this is the escape
+    hatch for adapters with no owner, so demanding a resolvable caller here would
+    make exactly those adapters undeletable.
+    """
+    ident = await _identity(
+        request, x_litellm_user_id, x_litellm_key_alias, require=False
+    )
     _check_base_model(base_model)
     try:
         validation.validate_name(name)
@@ -466,7 +482,12 @@ async def reconcile_now(
     x_litellm_user_id: str | None = Header(None),
     x_litellm_key_alias: str | None = Header(None),
 ) -> dict:
-    ident = await _identity(request, x_litellm_user_id, x_litellm_key_alias)
+    # require=False so a keyless in-cluster caller gets the accurate "ops-only"
+    # 403 from _require_ops rather than a confusing identity error. "anonymous"
+    # is never ops, so this doesn't widen access.
+    ident = await _identity(
+        request, x_litellm_user_id, x_litellm_key_alias, require=False
+    )
     _require_ops(ident)
     return await reconcile.reconcile_all()
 
