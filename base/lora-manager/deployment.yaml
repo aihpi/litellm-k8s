@@ -38,6 +38,20 @@ spec:
               value: "4294967296"
             - name: MAX_LORA_RANK
               value: "64"
+            # Callers allowed to delete any adapter (not just their own) and to
+            # POST /reconcile. Matched against the LiteLLM identity headers.
+            # TODO: fill in the real ops key aliases — while this is empty,
+            # adapters with no upload record (gemma-4-31b-leo, -protokoll) can
+            # only be deleted from inside the cluster.
+            - name: ADMIN_KEY_ALIASES
+              value: ""
+            - name: ADMIN_USER_IDS
+              value: ""
+            # Re-load adapters missing from vLLM and re-register ones missing
+            # from LiteLLM's router every 5 min. 0 disables the loop but keeps
+            # POST /reconcile.
+            - name: RECONCILE_INTERVAL_SECONDS
+              value: "300"
           volumeMounts:
             - name: ministral-3-14b-adapters
               mountPath: /adapters/ministral-3-14b

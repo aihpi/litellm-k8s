@@ -34,6 +34,19 @@ async def register_model(name: str, base_model: str, access: str | None) -> None
         r.raise_for_status()
 
 
+async def list_registered_models() -> set[str]:
+    """Every model_name the proxy currently routes — config.yaml + DB rows.
+
+    Same endpoint scripts/sync-models-to-db.sh uses. A name missing here is a
+    name that would 400 with "Invalid model name" on inference.
+    """
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        r = await client.get(f"{LITELLM_URL}/model/info", headers=_headers())
+        r.raise_for_status()
+        data = r.json()
+    return {m["model_name"] for m in data.get("data", []) if m.get("model_name")}
+
+
 async def delete_model(name: str) -> None:
     body = {"model_name": name}
     async with httpx.AsyncClient(timeout=30.0) as client:

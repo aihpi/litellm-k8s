@@ -75,6 +75,13 @@ data:
             - team_alias
 
     general_settings:
+      # Persist models registered via the UI / POST /model/new in Postgres and
+      # load them back on startup. The STORE_MODEL_IN_DB env var is NOT read by
+      # litellm 1.91.x — only this config key enables the feature. Without it,
+      # UI-added models disappear from the router on every pod restart (the DB
+      # rows survive; they just never get loaded).
+      store_model_in_db: true
+
       # Routes the user-facing /v1/lora/* paths to the internal lora-manager
       # service. `auth: true` gates on the caller's LiteLLM API key (rather
       # than master-only). `forward_headers: true` makes LiteLLM pass user
@@ -87,6 +94,14 @@ data:
           forward_headers: true
         - path: "/v1/lora/adapters"
           target: "http://lora-manager:8000/adapters"
+          auth: true
+          forward_headers: true
+        # Fixed path with name/base_model as form fields rather than
+        # DELETE /v1/lora/adapters/{base_model}/{name}: pass_through_endpoints
+        # matches exact paths. lora-manager only lets the uploader (or an ops
+        # key alias) through, which is why forward_headers matters here.
+        - path: "/v1/lora/delete"
+          target: "http://lora-manager:8000/delete"
           auth: true
           forward_headers: true
 

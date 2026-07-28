@@ -150,6 +150,21 @@ Example:
 
 The script calls `/model/new` on the LiteLLM proxy, which stores the registration in Postgres. This is a **one-time step** per model — you don't need to re-register after redeploying or restarting the vLLM pod.
 
+### Option C: bulk sync (`sync-models-to-db.sh`)
+
+To register every deployed model in one go (fresh DB, disaster recovery, or after adding several models):
+
+```bash
+export LITELLM_MASTER_KEY=<your-master-key>
+export LITELLM_URL=https://api.aisc.hpi.de
+./scripts/sync-models-to-db.sh          # adds models the proxy doesn't know yet
+./scripts/sync-models-to-db.sh --all    # also DB-registers models from config.yaml
+```
+
+The script is idempotent — model names already known to the proxy are skipped. When you add a new model to the cluster, also add its payload to the `MODELS` catalog in the script so the registry stays reproducible.
+
+> **Persistence requires two things** (both in place since July 2026): `store_model_in_db: true` under `general_settings` in [base/litellm/configmap.yaml](../base/litellm/configmap.yaml) — the `STORE_MODEL_IN_DB` env var is **ignored** by litellm 1.91.x — and a stable `LITELLM_SALT_KEY` in `litellm-secret`. Without the former, DB models are not loaded at startup; if the salt key (or, when unset, the master key it falls back to) changes, existing DB rows become undecryptable and are silently dropped.
+
 ## 7. Test
 
 ```bash
@@ -384,6 +399,7 @@ Each adapter can be registered as a separate `model_list` entry pointing at the 
 | ConfigMap change ignored          | Pod not restarted                    | `kubectl rollout restart deploy/<n> -n litellm`  |
 | Slow first startup (10–30 min)    | Downloading weights from HuggingFace | Wait; PVC caches for next time                   |
 | Model not in LiteLLM `/v1/models` | Not registered with gateway          | Register via UI or `add-model.sh`                |
+| UI-added models gone after LiteLLM restart | `store_model_in_db: true` missing from `general_settings` (the `STORE_MODEL_IN_DB` env var is ignored by litellm 1.91.x), or the salt/master key changed | Keep the flag in the configmap; keep `LITELLM_SALT_KEY` stable; re-run `sync-models-to-db.sh` |
 
 ## Useful commands
 

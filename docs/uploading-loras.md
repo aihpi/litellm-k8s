@@ -166,14 +166,16 @@ Returns something like:
 ```json
 {
   "ministral-3-14b": [
-    {"name": "ministral-3-14b-scale"},
-    {"name": "ministral-3-14b-therapy-depression-v1"}
+    {"name": "ministral-3-14b-scale", "owner": "felix", "access": null},
+    {"name": "ministral-3-14b-therapy-depression-v1", "owner": "felix", "access": "therapy-team"}
   ],
   "gemma-4-31b": [
-    {"name": "gemma-4-31b-leo"}
+    {"name": "gemma-4-31b-leo", "owner": null, "access": null}
   ]
 }
 ```
+
+`owner` is the user who uploaded the adapter — that's who is allowed to delete it. `null` means the adapter predates upload tracking and only the ops team can remove it.
 
 ---
 
@@ -207,6 +209,10 @@ Only keys assigned to the `therapy-team` access group can see or invoke the adap
 | `413 upload exceeds ...` | Tarball over 4 GiB | Drop unnecessary files (training_args, optimizer states) |
 | `500 vllm load failed` | Adapter trained against a different base model than declared | Check `base_model_name_or_path` in `adapter_config.json` matches |
 | `curl: (26) Failed to open/read local data` | Bad path on `-F adapter=@...` | `ls -lh` the path you're passing |
+| `401 delete requires user identity` | Delete called without going through the LiteLLM pass-through | Use `https://api.aisc.hpi.de/v1/lora/delete` with your personal `sk-...` key |
+| `403 belongs to another user` | Deleting an adapter someone else uploaded | Ask the uploader (see `owner` in the listing) |
+| `403 has no upload record` | Deleting an adapter that predates upload tracking | Ask the ops team |
+| `404 adapter 'X' not found` | Wrong name or wrong `base_model` on delete | Check the listing endpoint |
 
 ---
 
@@ -215,13 +221,37 @@ Only keys assigned to the `therapy-team` access group can see or invoke the adap
 - The adapter is written to a shared persistent volume on the cluster.
 - vLLM loads it into GPU memory immediately (no model restart needed).
 - LiteLLM gets a new entry in its model list with your adapter's name.
-- If the vLLM pod restarts later, the adapter is automatically re-loaded on boot — no need to re-upload.
+- Restarts are handled for you. The volume is the source of truth: the vLLM pod re-discovers every adapter on it at boot, and lora-manager re-registers anything missing from LiteLLM's model list within a few minutes. You never need to re-upload because something restarted.
 
 ---
 
 ## Deleting an adapter
 
-Currently only the ops team can delete adapters (the delete endpoint isn't exposed externally — it's a cluster-internal call). Ping them with the adapter name and base model and they'll remove it.
+You can delete adapters you uploaded yourself:
+
+```bash
+curl -sS -X POST https://api.aisc.hpi.de/v1/lora/delete \
+  -H "Authorization: Bearer ${LITELLM_KEY}" \
+  -F "name=ministral-3-14b-my-adapter" \
+  -F "base_model=ministral-3-14b"
+```
+
+Response:
+
+```json
+{
+  "name": "ministral-3-14b-my-adapter",
+  "base_model": "ministral-3-14b",
+  "deleted": true,
+  "errors": []
+}
+```
+
+This unloads the adapter from vLLM, removes it from LiteLLM's model list, and deletes the files from the persistent volume. **It is not recoverable** — re-uploading is the only way back. A non-empty `errors` array means one of the three steps had a problem; the files are still gone, so report it to the ops team rather than assuming the adapter is intact.
+
+**Who can delete what:** only the key that uploaded an adapter can delete it, plus the ops team. If you get `403 belongs to another user`, ask whoever uploaded it. Adapters that predate upload tracking (registered by hand before this service existed) have no recorded owner and show `"owner": null` in the listing — those are ops-only.
+
+To check what you own before deleting, use the listing endpoint (see above) — each entry includes `owner` and `access`.
 
 ---
 
