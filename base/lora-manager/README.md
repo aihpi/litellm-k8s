@@ -15,7 +15,7 @@ cd base/lora-manager
 docker build -t lora-manager:dev .
 docker run --rm -p 8000:8000 \
   -e LITELLM_MASTER_KEY=test \
-  -e REQUIRE_IDENTITY_HEADERS=false \
+  -e REQUIRE_IDENTITY=false \
   lora-manager:dev
 # curl localhost:8000/docs
 ```
@@ -34,13 +34,25 @@ Direct-on-service (requires kubectl exec or port-forward):
 - `GET  /reconcile/status` — result of the last reconciliation pass
 - `POST /reconcile` — trigger a pass now (ops identity required)
 
+## Identity
+
+**Identity comes from the caller's API key, not from headers.** Verified against the live proxy (July 2026): `pass_through_endpoints` with `forward_headers: true` forwards `authorization` but **not** `x-litellm-user-id` or `x-litellm-key-alias`. So `_identity()` takes the bearer token and resolves it via `GET /key/info?key=…` using the master key, reading `user_id` (falling back to `key_alias`).
+
+This is also the safer design: a header can be forged by anything able to reach `lora-manager:8000` inside the namespace, whereas a key has to survive LiteLLM's own validation. Headers remain a fallback for in-cluster callers with no key.
+
+`REQUIRE_IDENTITY` (default **on**) rejects a request whose identity doesn't resolve, rather than recording `anonymous` — an adapter with no owner is one nobody can delete afterwards.
+
+A caller presenting `LITELLM_MASTER_KEY` is `master-key`, and counts as ops: it isn't a user, so it can't *own* anything, but it can delete anything. That makes `ADMIN_KEY_ALIASES` / `ADMIN_USER_IDS` purely for delegating ops to a personal key.
+
+**Virtual keys must be allowed onto the route.** Without it the proxy rejects them before lora-manager sees the request: `Key/team not allowed to access passthrough route /v1/lora/upload`. Set `metadata.allowed_passthrough_routes` on the key or team (admin-only field) to include `/v1/lora/upload`, `/v1/lora/adapters`, `/v1/lora/delete`. This is why early uploads were all done with the master key — and therefore why they have no owner.
+
 ## Ownership
 
 There is no separate metadata store. `/adapters/{base_model}/.upload-log.jsonl` (written by `audit.py`) is the ownership record: `audit.latest_upload()` returns the most recent upload event for a name, which carries `user_id`, `key_alias`, and `access`. The log lives in the base-model dir, not the adapter dir, so it survives a delete.
 
-A recorded `user_id` of `anonymous` counts as *no* owner — `REQUIRE_IDENTITY_HEADERS` defaults off, so anonymous uploads exist and must not be deletable by any other caller who also arrives without identity headers. Delete enforces real identity regardless of that flag.
+A recorded `user_id` of `anonymous` counts as *no* owner, so pre-`REQUIRE_IDENTITY` uploads can't be deleted by whoever happens to also arrive unidentified.
 
-Adapters with no record at all (uploaded before this service, or registered by hand) are ops-only to delete. `ADMIN_KEY_ALIASES` / `ADMIN_USER_IDS` define who counts as ops; while both are empty nobody does, and the in-cluster `DELETE` route is the only way to remove such an adapter.
+Adapters with no record at all (uploaded before this service, or with the master key) are ops-only to delete.
 
 ## Reconciliation
 
@@ -65,8 +77,9 @@ Assumes `replicas: 1`. If this is ever scaled up, passes need leader election (o
 | `ALLOWED_BASE_MODELS` | `ministral-3-14b` | Comma-separated allowlist. |
 | `MAX_UPLOAD_BYTES` | `4294967296` (4 GiB) | |
 | `MAX_LORA_RANK` | `64` | Matches `--max-lora-rank` on vLLM. Rejects higher-rank adapters. |
-| `ADMIN_KEY_ALIASES` | (empty) | Comma-separated LiteLLM key aliases that may delete any adapter and trigger a reconcile. |
-| `ADMIN_USER_IDS` | (empty) | Same, matched on `x-litellm-user-id`. |
+| `REQUIRE_IDENTITY` | `true` | Reject requests whose caller can't be resolved via `/key/info`. Off allows unattributed (undeletable) uploads. |
+| `ADMIN_KEY_ALIASES` | (empty) | Extra key aliases counting as ops. The master key already does, so this is only for delegation. |
+| `ADMIN_USER_IDS` | (empty) | Same, matched on the resolved `user_id`. |
 | `RECONCILE_INTERVAL_SECONDS` | `300` | `0` disables the background loop; `POST /reconcile` still works. |
 | `RECONCILE_ADOPT_UNKNOWN` | `true` | Register adapter dirs with no upload record (no access group applied). Turn off if an adapter must be private-by-default. |
 

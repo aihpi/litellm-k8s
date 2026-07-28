@@ -40,13 +40,14 @@ RECONCILE_INTERVAL_SECONDS = int(os.environ.get("RECONCILE_INTERVAL_SECONDS", "3
 # this off if an adapter ever needs to be private-by-default.
 RECONCILE_ADOPT_UNKNOWN = _bool(os.environ.get("RECONCILE_ADOPT_UNKNOWN"), True)
 
-# LiteLLM's pass_through_endpoints with forward_headers:true does NOT inject
-# x-litellm-user-id reliably across versions. Default to permissive so uploads
-# aren't blocked on identity — audit log records "anonymous" when missing.
-# Re-enable strict mode once we've confirmed which headers LiteLLM actually
-# forwards (see LOG_HEADERS_ON_UPLOAD below).
-REQUIRE_IDENTITY_HEADERS = _bool(os.environ.get("REQUIRE_IDENTITY_HEADERS"), False)
+# Confirmed empirically (July 2026): pass_through_endpoints with
+# forward_headers:true forwards `authorization` but NOT x-litellm-user-id or
+# x-litellm-key-alias. So identity is resolved from the caller's bearer token
+# via GET /key/info, and the headers are only a fallback for direct in-cluster
+# callers. Refuse the request when nothing resolves — an upload with no owner is
+# an adapter nobody can delete afterwards.
+REQUIRE_IDENTITY = _bool(os.environ.get("REQUIRE_IDENTITY"), True)
 
-# Dump all incoming headers to the log on each /upload. Temporary, for
-# figuring out LiteLLM's actual forwarded-header set. Disable once known.
-LOG_HEADERS_ON_UPLOAD = _bool(os.environ.get("LOG_HEADERS_ON_UPLOAD"), True)
+# Dump all incoming headers to the log on each /upload. Answered its question
+# (see above) — off by default now; flip on to debug a new proxy version.
+LOG_HEADERS_ON_UPLOAD = _bool(os.environ.get("LOG_HEADERS_ON_UPLOAD"), False)

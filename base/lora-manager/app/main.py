@@ -7,6 +7,7 @@ import tempfile
 import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import NamedTuple
 
 from fastapi import FastAPI, File, Form, Header, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse
@@ -17,9 +18,10 @@ from .config import (
     ADMIN_KEY_ALIASES,
     ADMIN_USER_IDS,
     ALLOWED_BASE_MODELS,
+    LITELLM_MASTER_KEY,
     LOG_HEADERS_ON_UPLOAD,
     MAX_UPLOAD_BYTES,
-    REQUIRE_IDENTITY_HEADERS,
+    REQUIRE_IDENTITY,
 )
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
@@ -40,22 +42,61 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="lora-manager", version="0.2.0", lifespan=lifespan)
 
 
-def _identity(
+class Identity(NamedTuple):
+    user_id: str
+    key_alias: str
+    # True when the caller authenticated with LITELLM_MASTER_KEY, which is not a
+    # user and therefore can't own anything — but does count as ops.
+    is_master: bool
+
+
+def _bearer(request: Request) -> str | None:
+    auth = request.headers.get("authorization") or ""
+    scheme, _, token = auth.partition(" ")
+    return token.strip() if scheme.lower() == "bearer" and token.strip() else None
+
+
+async def _identity(
     request: Request,
     x_litellm_user_id: str | None,
     x_litellm_key_alias: str | None,
-) -> tuple[str, str]:
+) -> Identity:
+    """Who is calling.
+
+    The bearer token is the authoritative source: LiteLLM's pass-through
+    forwards `authorization` but not the identity headers, and a header could be
+    forged by anything able to reach this service inside the namespace whereas a
+    key has to survive LiteLLM's own validation. Headers remain a fallback for
+    direct in-cluster callers that have no key.
+    """
     if LOG_HEADERS_ON_UPLOAD:
         # Redact bearer tokens before logging.
         safe = {
             k: ("Bearer <redacted>" if k.lower() == "authorization" else v)
             for k, v in request.headers.items()
         }
-        log.info("incoming /upload headers: %s", safe)
+        log.info("incoming request headers: %s", safe)
 
-    # Best-effort identity. Try the documented LiteLLM headers first, then a
-    # few alternate spellings we've seen in different versions, then fall back
-    # to "anonymous" if we genuinely have nothing.
+    token = _bearer(request)
+    if token and LITELLM_MASTER_KEY and token == LITELLM_MASTER_KEY:
+        return Identity("master-key", "master-key", True)
+
+    if token:
+        try:
+            info = await litellm_client.key_info(token)
+        except Exception as e:
+            # Don't fail the request on a flaky lookup — fall through to headers
+            # and let REQUIRE_IDENTITY decide.
+            log.warning("key_info lookup failed: %s", e)
+            info = None
+        if info:
+            user_id = info.get("user_id") or info.get("key_alias")
+            key_alias = info.get("key_alias") or info.get("user_id")
+            if user_id:
+                return Identity(str(user_id), str(key_alias or user_id), False)
+            log.warning("key resolved but carries neither user_id nor key_alias")
+
+    # Fallback: headers, for in-cluster callers.
     user_id = (
         x_litellm_user_id
         or request.headers.get("x-litellm-user-id")
@@ -70,12 +111,15 @@ def _identity(
         or "anonymous"
     )
 
-    if REQUIRE_IDENTITY_HEADERS and user_id == "anonymous":
+    if REQUIRE_IDENTITY and user_id == "anonymous":
         raise HTTPException(
             status_code=401,
-            detail="missing user identity header — request must go through LiteLLM pass-through",
+            detail="could not determine caller identity from the API key — an "
+            "adapter with no owner cannot be deleted afterwards. Use a personal "
+            "sk- key with a user_id assigned (set REQUIRE_IDENTITY=false to "
+            "allow unattributed uploads)",
         )
-    return (user_id, key_alias)
+    return Identity(user_id, key_alias, False)
 
 
 def _check_base_model(base_model: str) -> None:
@@ -90,13 +134,22 @@ def _adapter_dir(base_model: str, name: str) -> Path:
     return Path(ADAPTERS_BASE_PATH) / base_model / name
 
 
-def _is_ops(user_id: str, key_alias: str) -> bool:
-    """Ops callers can delete any adapter and trigger a manual reconcile."""
-    return user_id in ADMIN_USER_IDS or key_alias in ADMIN_KEY_ALIASES
+def _is_ops(ident: Identity) -> bool:
+    """Ops callers can delete any adapter and trigger a manual reconcile.
+
+    The master key qualifies unconditionally — it's the admin credential, and
+    relying on it means ADMIN_KEY_ALIASES only matters for delegating ops to
+    someone's personal key.
+    """
+    return (
+        ident.is_master
+        or ident.user_id in ADMIN_USER_IDS
+        or ident.key_alias in ADMIN_KEY_ALIASES
+    )
 
 
-def _require_ops(user_id: str, key_alias: str) -> None:
-    if not _is_ops(user_id, key_alias):
+def _require_ops(ident: Identity) -> None:
+    if not _is_ops(ident):
         raise HTTPException(status_code=403, detail="ops-only endpoint")
 
 
@@ -139,7 +192,7 @@ async def upload(
     x_litellm_user_id: str | None = Header(None),
     x_litellm_key_alias: str | None = Header(None),
 ) -> JSONResponse:
-    user_id, key_alias = _identity(request, x_litellm_user_id, x_litellm_key_alias)
+    ident = await _identity(request, x_litellm_user_id, x_litellm_key_alias)
     _check_base_model(base_model)
     try:
         validation.validate_name(name)
@@ -228,8 +281,8 @@ async def upload(
                 {
                     "action": "upload",
                     "name": name,
-                    "user_id": user_id,
-                    "key_alias": key_alias,
+                    "user_id": ident.user_id,
+                    "key_alias": ident.key_alias,
                     "access": access,
                     "file_count": summary["file_count"],
                     "total_bytes": summary["total_bytes"],
@@ -287,7 +340,7 @@ async def list_adapters() -> dict:
 
 
 async def _do_delete(
-    base_model: str, name: str, user_id: str, key_alias: str, via: str, owner: str | None
+    base_model: str, name: str, ident: Identity, via: str, owner: str | None
 ) -> dict:
     """Unload, unregister, remove files. Best-effort: partial failures are
     reported rather than raised, so a half-gone adapter still gets cleaned up."""
@@ -313,8 +366,8 @@ async def _do_delete(
         {
             "action": "delete",
             "name": name,
-            "user_id": user_id,
-            "key_alias": key_alias,
+            "user_id": ident.user_id,
+            "key_alias": ident.key_alias,
             "owner": owner,
             "via": via,
             "errors": errors,
@@ -337,7 +390,7 @@ async def delete_adapter_api(
     Fixed path with form fields rather than DELETE-with-path-params: LiteLLM's
     pass_through_endpoints matches exact paths.
     """
-    user_id, key_alias = _identity(request, x_litellm_user_id, x_litellm_key_alias)
+    ident = await _identity(request, x_litellm_user_id, x_litellm_key_alias)
     _check_base_model(base_model)
     try:
         validation.validate_name(name)
@@ -350,10 +403,10 @@ async def delete_adapter_api(
     record = audit.latest_upload(base_model, name)
     owner = record.get("user_id") if record else None
 
-    if not _is_ops(user_id, key_alias):
+    if not _is_ops(ident):
         # Deleting is destructive and attributable, so it needs real identity
         # even though REQUIRE_IDENTITY_HEADERS may be off for uploads.
-        if user_id == "anonymous":
+        if ident.user_id == "anonymous":
             raise HTTPException(
                 status_code=401,
                 detail="delete requires user identity — request must go through "
@@ -365,13 +418,13 @@ async def delete_adapter_api(
                 detail=f"adapter {name!r} has no upload record (registered before "
                 "ownership tracking) — ask the ops team to delete it",
             )
-        if owner != user_id:
+        if owner != ident.user_id:
             raise HTTPException(
                 status_code=403,
                 detail=f"adapter {name!r} belongs to another user",
             )
 
-    return await _do_delete(base_model, name, user_id, key_alias, "api", owner)
+    return await _do_delete(base_model, name, ident, "api", owner)
 
 
 @app.delete("/adapters/{base_model}/{name}")
@@ -384,7 +437,7 @@ async def delete_adapter(
 ) -> dict:
     """In-cluster admin delete. No ownership check — reachable only from inside
     the namespace (kubectl port-forward / exec), which is the existing posture."""
-    user_id, key_alias = _identity(request, x_litellm_user_id, x_litellm_key_alias)
+    ident = await _identity(request, x_litellm_user_id, x_litellm_key_alias)
     _check_base_model(base_model)
     try:
         validation.validate_name(name)
@@ -396,7 +449,7 @@ async def delete_adapter(
 
     record = audit.latest_upload(base_model, name)
     owner = record.get("user_id") if record else None
-    return await _do_delete(base_model, name, user_id, key_alias, "internal", owner)
+    return await _do_delete(base_model, name, ident, "internal", owner)
 
 
 @app.get("/reconcile/status")
@@ -413,8 +466,8 @@ async def reconcile_now(
     x_litellm_user_id: str | None = Header(None),
     x_litellm_key_alias: str | None = Header(None),
 ) -> dict:
-    user_id, key_alias = _identity(request, x_litellm_user_id, x_litellm_key_alias)
-    _require_ops(user_id, key_alias)
+    ident = await _identity(request, x_litellm_user_id, x_litellm_key_alias)
+    _require_ops(ident)
     return await reconcile.reconcile_all()
 
 

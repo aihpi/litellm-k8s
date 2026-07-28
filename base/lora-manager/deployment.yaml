@@ -38,11 +38,15 @@ spec:
               value: "4294967296"
             - name: MAX_LORA_RANK
               value: "64"
-            # Callers allowed to delete any adapter (not just their own) and to
-            # POST /reconcile. Matched against the LiteLLM identity headers.
-            # TODO: fill in the real ops key aliases — while this is empty,
-            # adapters with no upload record (gemma-4-31b-leo, -protokoll) can
-            # only be deleted from inside the cluster.
+            # Refuse uploads/deletes whose caller can't be resolved from their
+            # API key via /key/info — an unattributed adapter is one nobody can
+            # delete later. The pass-through does NOT forward identity headers,
+            # so the bearer token is the only signal; see README.
+            - name: REQUIRE_IDENTITY
+              value: "true"
+            # Extra callers counting as ops (delete anything, POST /reconcile).
+            # LITELLM_MASTER_KEY already qualifies, so these are only needed to
+            # delegate ops to someone's personal key.
             - name: ADMIN_KEY_ALIASES
               value: ""
             - name: ADMIN_USER_IDS

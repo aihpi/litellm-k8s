@@ -34,6 +34,30 @@ async def register_model(name: str, base_model: str, access: str | None) -> None
         r.raise_for_status()
 
 
+async def key_info(api_key: str) -> dict | None:
+    """Resolve a caller's virtual key to its identity, as admin.
+
+    This is how we attribute uploads. LiteLLM's pass_through_endpoints does NOT
+    forward x-litellm-user-id / x-litellm-key-alias in the version we run (only
+    `authorization` arrives), so the bearer token is the only identity signal we
+    get — and unlike a header it can't be spoofed by an in-cluster caller, since
+    LiteLLM validates it.
+
+    Returns the key's info dict, or None if the proxy doesn't recognise it.
+    """
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        r = await client.get(
+            f"{LITELLM_URL}/key/info", params={"key": api_key}, headers=_headers()
+        )
+        if r.status_code in (400, 401, 404):
+            return None
+        r.raise_for_status()
+        body = r.json()
+    # Documented shape is {"key": ..., "info": {...}}; tolerate a flat response.
+    info = body.get("info")
+    return info if isinstance(info, dict) else body
+
+
 async def _model_info(client: httpx.AsyncClient) -> list[dict]:
     r = await client.get(f"{LITELLM_URL}/model/info", headers=_headers())
     r.raise_for_status()

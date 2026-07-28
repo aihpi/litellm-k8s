@@ -11,7 +11,8 @@ After upload, your adapter behaves like any other model: send a chat request wit
 ## What you need
 
 - A trained LoRA adapter (PEFT format) on a host that has internet access to `api.aisc.hpi.de`.
-- Your LiteLLM API key (starts with `sk-...`). Same one you already use for inference.
+- Your **personal** LiteLLM API key (starts with `sk-...`) — the same one you use for inference, not the shared master key. Your uploads are attributed to whoever owns the key, and that is who is allowed to delete them later.
+- That key must be allowed onto the `/v1/lora/*` routes. If you get `Key/team not allowed to access passthrough route /v1/lora/upload`, ask the ops team to add them to your key's `allowed_passthrough_routes` — it's a one-time, admin-only change.
 - The name of the **base model** your adapter was trained on. Currently supported:
   - `ministral-3-14b` — Mistral Ministral 3 14B Instruct
   - `gemma-4-31b` — Google Gemma 4 31B Instruct
@@ -201,6 +202,8 @@ Only keys assigned to the `therapy-team` access group can see or invoke the adap
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | `401 Unauthorized` | Bearer key wrong or missing | Check `${LITELLM_KEY}` is set |
+| `Key/team not allowed to access passthrough route` | Your key isn't allowed on `/v1/lora/*` | Ask ops to add the routes to your key (one-time) |
+| `401 could not determine caller identity` | Uploading with a key that has no user attached (e.g. the master key) | Use your personal `sk-` key, otherwise the adapter has no owner and you can't delete it |
 | `400 base_model 'X' not in allowlist` | Typo in `base_model`, or that model isn't LoRA-enabled | Use one of the supported names above |
 | `400 name 'X' must match ...` | Invalid character in name | See naming rules in Step 3 |
 | `400 validation failed: ...` | Bad tarball contents | Check the file allowlist; rebuild without `.bin` files |
