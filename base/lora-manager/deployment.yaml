@@ -6,6 +6,15 @@ metadata:
     app: lora-manager
 spec:
   replicas: 1
+  # Recreate, not the default RollingUpdate: a surge pod would run a SECOND
+  # reconcile loop against the same ReadWriteMany adapters PVCs, and the
+  # INFLIGHT/lock guards that keep reconciliation from colliding with an
+  # in-progress upload or delete are process-local. Two pods can therefore
+  # register the same adapter twice, or reconcile a half-copied directory that
+  # the other pod is still writing (a multi-GB shutil.move takes tens of
+  # seconds). Brief downtime on deploy is the right trade for a singleton.
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: lora-manager

@@ -27,6 +27,13 @@ from .config import (
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 log = logging.getLogger("lora-manager")
 
+# httpx logs every request URL at INFO. /key/info carries the caller's plaintext
+# virtual key in its query string, so leaving this at INFO writes usable user
+# keys into the pod log on the ordinary success path — a far weaker grant than
+# read access to litellm-secret would be. Verified with a log-capture test.
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -51,16 +58,31 @@ class Identity(NamedTuple):
 
 
 def _bearer(request: Request) -> str | None:
-    auth = request.headers.get("authorization") or ""
-    scheme, _, token = auth.partition(" ")
-    return token.strip() if scheme.lower() == "bearer" and token.strip() else None
+    """The caller's LiteLLM key.
+
+    x-litellm-api-key is checked too, because LiteLLM accepts it *in preference
+    to* Authorization. Reading only Authorization would let a caller authenticate
+    to the proxy via x-litellm-api-key while presenting no token here, so key
+    resolution would be skipped entirely.
+    """
+    for raw in (
+        request.headers.get("x-litellm-api-key"),
+        request.headers.get("authorization"),
+    ):
+        if not raw:
+            continue
+        scheme, _, rest = raw.partition(" ")
+        token = (rest if scheme.lower() == "bearer" else raw).strip()
+        if token:
+            return token
+    return None
 
 
 async def _identity(
     request: Request,
     x_litellm_user_id: str | None,
     x_litellm_key_alias: str | None,
-    require: bool | None = None,
+    internal: bool = False,
 ) -> Identity:
     """Who is calling.
 
@@ -70,14 +92,12 @@ async def _identity(
     key has to survive LiteLLM's own validation. Headers remain a fallback for
     direct in-cluster callers that have no key.
 
-    `require` overrides REQUIRE_IDENTITY. The in-cluster routes pass False: they
-    are reachable only via kubectl exec / port-forward, and refusing an
-    unidentified caller there would close the ops escape hatch for adapters that
-    have no owner — the one case where those routes exist at all. They still get
+    `internal=True` marks the in-cluster routes (kubectl exec / port-forward).
+    Those may fall back to identity headers and are never refused for lacking an
+    identity: refusing there would close the ops escape hatch for adapters that
+    have no owner, which is the one reason those routes exist. They still get
     Identity("anonymous", ...), which is never ops.
     """
-    if require is None:
-        require = REQUIRE_IDENTITY
     if LOG_HEADERS_ON_UPLOAD:
         # Redact bearer tokens before logging.
         safe = {
@@ -94,9 +114,9 @@ async def _identity(
         try:
             info = await litellm_client.key_info(token)
         except Exception as e:
-            # Don't fail the request on a flaky lookup — fall through to headers
-            # and let REQUIRE_IDENTITY decide.
-            log.warning("key_info lookup failed: %s", e)
+            # Never log the exception message: httpx builds it from the request
+            # URL, which carries the caller's plaintext key.
+            log.warning("key_info lookup failed: %s", type(e).__name__)
             info = None
         if info:
             user_id = info.get("user_id") or info.get("key_alias")
@@ -105,7 +125,23 @@ async def _identity(
                 return Identity(str(user_id), str(key_alias or user_id), False)
             log.warning("key resolved but carries neither user_id nor key_alias")
 
-    # Fallback: headers, for in-cluster callers.
+    # Identity headers are caller-controlled — LiteLLM's pass-through relays client
+    # headers verbatim, so anyone who can reach /v1/lora/* could send
+    # x-litellm-user-id: <victim> and inherit their adapters. So they are trusted
+    # ONLY on the in-cluster routes, which are network-restricted and have no
+    # ownership check to subvert anyway. Note this is deliberately not keyed off
+    # REQUIRE_IDENTITY: turning that flag off must not re-open spoofing.
+    if not internal:
+        if REQUIRE_IDENTITY:
+            raise HTTPException(
+                status_code=401,
+                detail="could not determine caller identity from the API key — an "
+                "adapter with no owner cannot be deleted afterwards. Use a "
+                "personal sk- key that has a user_id or key_alias assigned "
+                "(set REQUIRE_IDENTITY=false to allow unattributed uploads)",
+            )
+        return Identity("anonymous", "anonymous", False)
+
     user_id = (
         x_litellm_user_id
         or request.headers.get("x-litellm-user-id")
@@ -119,15 +155,6 @@ async def _identity(
         or request.headers.get("x-litellm-key-name")
         or "anonymous"
     )
-
-    if require and user_id == "anonymous":
-        raise HTTPException(
-            status_code=401,
-            detail="could not determine caller identity from the API key — an "
-            "adapter with no owner cannot be deleted afterwards. Use a personal "
-            "sk- key with a user_id assigned (set REQUIRE_IDENTITY=false to "
-            "allow unattributed uploads)",
-        )
     return Identity(user_id, key_alias, False)
 
 
@@ -279,26 +306,30 @@ async def upload(
     rollback_actions: list = []
     try:
         try:
-            await vllm_client.load_adapter(base_model, name, vllm_path)
-            rollback_actions.append(("unload-vllm", base_model, name))
+            # Hold the adapter lock across activation: a reconcile pass must not
+            # slip between the PVC write and /model/new and register this adapter
+            # itself (which would leave two router rows for one name).
+            async with reconcile.adapter_lock(base_model, name):
+                await vllm_client.load_adapter(base_model, name, vllm_path)
+                rollback_actions.append(("unload-vllm", base_model, name))
 
-            await litellm_client.register_model(name, base_model, access)
-            rollback_actions.append(("delete-litellm", name))
+                await litellm_client.register_model(name, base_model, access)
+                rollback_actions.append(("delete-litellm", name))
 
-            audit.log_event(
-                base_model,
-                {
-                    "action": "upload",
-                    "name": name,
-                    "user_id": ident.user_id,
-                    "key_alias": ident.key_alias,
-                    "access": access,
-                    "file_count": summary["file_count"],
-                    "total_bytes": summary["total_bytes"],
-                    "tensor_count": summary["tensor_count"],
-                    "sha256": sha.hexdigest(),
-                },
-            )
+                audit.log_event(
+                    base_model,
+                    {
+                        "action": "upload",
+                        "name": name,
+                        "user_id": ident.user_id,
+                        "key_alias": ident.key_alias,
+                        "access": access,
+                        "file_count": summary["file_count"],
+                        "total_bytes": summary["total_bytes"],
+                        "tensor_count": summary["tensor_count"],
+                        "sha256": sha.hexdigest(),
+                    },
+                )
         except Exception as e:
             log.exception("upload failed after PVC write; rolling back")
             for action in reversed(rollback_actions):
@@ -306,7 +337,7 @@ async def upload(
                     if action[0] == "unload-vllm":
                         await vllm_client.unload_adapter(action[1], action[2])
                     elif action[0] == "delete-litellm":
-                        await litellm_client.delete_model(action[1])
+                        await litellm_client.delete_model(action[1], base_model)
                 except Exception:
                     log.exception("rollback step %s failed", action)
             shutil.rmtree(target, ignore_errors=True)
@@ -358,15 +389,19 @@ async def _do_delete(
     reconcile.INFLIGHT.add(inflight)
     try:
         errors = []
-        try:
-            await vllm_client.unload_adapter(base_model, name)
-        except Exception as e:
-            errors.append(f"vllm unload: {e}")
-        try:
-            await litellm_client.delete_model(name)
-        except Exception as e:
-            errors.append(f"litellm delete: {e}")
-        shutil.rmtree(target, ignore_errors=True)
+        # The lock is what actually prevents a concurrent reconcile pass from
+        # re-registering this adapter after we remove it: INFLIGHT alone is only
+        # consulted when a pass builds its list, which may predate this call.
+        async with reconcile.adapter_lock(base_model, name):
+            try:
+                await vllm_client.unload_adapter(base_model, name)
+            except Exception as e:
+                errors.append(f"vllm unload: {e}")
+            try:
+                await litellm_client.delete_model(name, base_model)
+            except Exception as e:
+                errors.append(f"litellm delete: {e}")
+            shutil.rmtree(target, ignore_errors=True)
     finally:
         reconcile.INFLIGHT.discard(inflight)
 
@@ -452,7 +487,7 @@ async def delete_adapter(
     make exactly those adapters undeletable.
     """
     ident = await _identity(
-        request, x_litellm_user_id, x_litellm_key_alias, require=False
+        request, x_litellm_user_id, x_litellm_key_alias, internal=True
     )
     _check_base_model(base_model)
     try:
@@ -482,11 +517,11 @@ async def reconcile_now(
     x_litellm_user_id: str | None = Header(None),
     x_litellm_key_alias: str | None = Header(None),
 ) -> dict:
-    # require=False so a keyless in-cluster caller gets the accurate "ops-only"
+    # internal=True so a keyless in-cluster caller gets the accurate "ops-only"
     # 403 from _require_ops rather than a confusing identity error. "anonymous"
     # is never ops, so this doesn't widen access.
     ident = await _identity(
-        request, x_litellm_user_id, x_litellm_key_alias, require=False
+        request, x_litellm_user_id, x_litellm_key_alias, internal=True
     )
     _require_ops(ident)
     return await reconcile.reconcile_all()

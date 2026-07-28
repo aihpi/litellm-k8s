@@ -19,6 +19,7 @@ bug there breaks unrelated traffic. Missing files are reported, not acted on.
 import asyncio
 import logging
 import time
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -49,9 +50,32 @@ LAST_RESULT: dict | None = None
 # NotReady pod instead of a silent write failure.
 AUTH_OK: bool | None = None
 
-# Single replica (see deployment.yaml), so a plain lock is enough to keep the
-# periodic loop and a manual POST /reconcile from overlapping.
+# Single replica (see deployment.yaml, strategy: Recreate), so a plain lock is
+# enough to keep the periodic loop and a manual POST /reconcile from overlapping.
 _LOCK = asyncio.Lock()
+
+# One lock per adapter, shared with the upload and delete handlers.
+#
+# INFLIGHT alone is not sufficient: a pass filters the adapter list once and then
+# awaits (load_adapter allows 60s), so a delete that starts *after* that snapshot
+# can finish entirely inside one await, and the pass would then re-register an
+# adapter whose files it just watched disappear. That leaves a db_model=true row
+# pointing at an unloaded LoRA which survives every restart, is never pruned
+# (this module is additive only), and which neither delete route can remove
+# because both 404 once the directory is gone.
+#
+# Never pruned: dropping an entry while another coroutine is waiting on it would
+# let a third create a fresh lock and defeat the mutual exclusion. Adapter names
+# are bounded and validated, so the dict stays small.
+_NAME_LOCKS: dict[tuple[str, str], asyncio.Lock] = {}
+
+
+@asynccontextmanager
+async def adapter_lock(base_model: str, name: str):
+    """Serialise mutations of one adapter across reconcile, upload and delete."""
+    lock = _NAME_LOCKS.setdefault((base_model, name), asyncio.Lock())
+    async with lock:
+        yield
 
 
 def _note_auth(exc: Exception | None) -> None:
@@ -100,6 +124,18 @@ def adapter_names(base_model: str) -> list[str]:
     )
 
 
+def _still_present(base_model: str, name: str) -> bool:
+    """Re-check under the adapter lock, immediately before mutating anything.
+
+    The pass's file listing is a snapshot; by the time we act on an entry a
+    delete may have removed it. Acting on a stale entry is how a deleted adapter
+    gets resurrected in the router.
+    """
+    if (base_model, name) in INFLIGHT:
+        return False
+    return (Path(ADAPTERS_BASE_PATH) / base_model / name).is_dir()
+
+
 async def _reconcile_base_model(base_model: str, registered: set[str] | None) -> dict:
     """One base model. `registered` is None when LiteLLM couldn't be reached."""
     out: dict = {
@@ -109,6 +145,7 @@ async def _reconcile_base_model(base_model: str, registered: set[str] | None) ->
         "adopted_without_metadata": [],
         "stale_in_litellm": [],
         "skipped_inflight": [],
+        "vanished_mid_pass": [],
         "errors": [],
     }
 
@@ -132,7 +169,13 @@ async def _reconcile_base_model(base_model: str, registered: set[str] | None) ->
             # vLLM mounts its own per-model PVC at /adapters, so from inside that
             # pod the path has no base_model prefix.
             try:
-                await vllm_client.load_adapter(base_model, name, f"/adapters/{name}")
+                async with adapter_lock(base_model, name):
+                    if not _still_present(base_model, name):
+                        out["vanished_mid_pass"].append(name)
+                        continue
+                    await vllm_client.load_adapter(
+                        base_model, name, f"/adapters/{name}"
+                    )
                 out["loaded_in_vllm"].append(name)
                 log.info("reconcile: loaded %s into vllm %s", name, base_model)
             except Exception as e:
@@ -143,7 +186,11 @@ async def _reconcile_base_model(base_model: str, registered: set[str] | None) ->
         for name in names:
             if name in registered:
                 continue
-            record = audit.latest_upload(base_model, name)
+            # Metadata comes from the raw event, NOT from latest_upload(): that
+            # helper nulls anonymously-recorded uploads because they have no
+            # *owner*, and reading `access` through it would silently publish a
+            # restricted adapter the moment it needed re-registering.
+            record = audit.latest_upload_event(base_model, name)
             if record is None and not RECONCILE_ADOPT_UNKNOWN:
                 out["errors"].append(
                     f"litellm register {name}: no upload record and "
@@ -152,7 +199,11 @@ async def _reconcile_base_model(base_model: str, registered: set[str] | None) ->
                 continue
             access = record.get("access") if record else None
             try:
-                await litellm_client.register_model(name, base_model, access)
+                async with adapter_lock(base_model, name):
+                    if not _still_present(base_model, name):
+                        out["vanished_mid_pass"].append(name)
+                        continue
+                    await litellm_client.register_model(name, base_model, access)
             except Exception as e:
                 out["errors"].append(f"litellm register {name}: {e}")
                 continue
