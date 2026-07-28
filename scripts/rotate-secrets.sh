@@ -19,8 +19,25 @@ POSTGRES_PASSWORD=$(openssl rand -hex 16)
 MASTER_KEY=$(openssl rand -hex 32)
 UI_PASSWORD=$(openssl rand -hex 16)
 
+# LITELLM_SALT_KEY encrypts model credentials stored in the DB
+# (LiteLLM_ProxyModelTable). It must stay stable across rotations — changing
+# it makes every DB-stored model undecryptable, and LiteLLM silently drops
+# them at startup. Reuse the live value if present; otherwise fall back to
+# the *current* master key (pre-salt-key deployments encrypted rows with it);
+# generate a fresh one only on a brand-new install.
+EXISTING_SALT_KEY=$(kubectl get secret litellm-secret -n "$NAMESPACE" -o jsonpath='{.data.LITELLM_SALT_KEY}' 2>/dev/null | base64 --decode || true)
+EXISTING_MASTER_KEY=$(kubectl get secret litellm-secret -n "$NAMESPACE" -o jsonpath='{.data.LITELLM_MASTER_KEY}' 2>/dev/null | base64 --decode || true)
+if [ -n "$EXISTING_SALT_KEY" ]; then
+  SALT_KEY="$EXISTING_SALT_KEY"
+elif [ -n "$EXISTING_MASTER_KEY" ]; then
+  SALT_KEY="$EXISTING_MASTER_KEY"
+else
+  SALT_KEY="sk-$(openssl rand -hex 32)"
+fi
+
 kubectl create secret generic litellm-secret \
   --from-literal=LITELLM_MASTER_KEY="sk-${MASTER_KEY}" \
+  --from-literal=LITELLM_SALT_KEY="${SALT_KEY}" \
   --from-literal=DATABASE_URL="postgresql://litellm:${POSTGRES_PASSWORD}@postgres-service:5432/litellm" \
   --from-literal=POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" \
   --from-literal=UI_USERNAME="${UI_USERNAME}" \

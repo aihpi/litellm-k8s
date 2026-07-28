@@ -42,8 +42,22 @@ spec:
                   key: LITELLM_MASTER_KEY
             - name: LITELLM_CONFIG
               value: /etc/litellm/config.yaml
+            # NOTE: litellm 1.91.x ignores this env var — the flag that actually
+            # enables DB-backed models is general_settings.store_model_in_db in
+            # config.yaml (see configmap.yaml). Kept for forward-compat.
             - name: STORE_MODEL_IN_DB
               value: "True"
+            # Encrypts model credentials stored in the DB. LiteLLM falls back to
+            # LITELLM_MASTER_KEY when this is unset, which silently orphans every
+            # DB-stored model if the master key is ever rotated. Set once, never
+            # change it. `optional` keeps pods starting with secrets sealed before
+            # this key existed (the master-key fallback applies until then).
+            - name: LITELLM_SALT_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: litellm-secret
+                  key: LITELLM_SALT_KEY
+                  optional: true
             - name: LITELLM_LOG
               valueFrom:
                 configMapKeyRef:

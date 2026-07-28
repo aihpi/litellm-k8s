@@ -32,3 +32,12 @@ kubeconfig
 .DS_Store
 test_image.jpg
 scripts/test_image_edit.py
+
+# Python
+__pycache__/
+*.pyc
+
+# Local-only cluster access (see scripts/kctl)
+.cluster.env
+scripts/kctl
+scripts/llmapi

@@ -6,6 +6,11 @@ data:
   LITELLM_LOG: debug
   UI_PATH: /ui
   config.yaml: |
+    general_settings:
+      # Required for models added via UI / /model/new to survive restarts —
+      # litellm 1.91.x does not read the STORE_MODEL_IN_DB env var.
+      store_model_in_db: true
+
     model_list:
       - model_name: llama-3b
         litellm_params:

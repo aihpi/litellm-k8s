@@ -22,6 +22,35 @@ def log_event(base_model: str, event: dict) -> None:
         f.write(json.dumps(event) + "\n")
 
 
+def latest_upload_event(base_model: str, name: str) -> dict | None:
+    """Most recent upload event for `name`, verbatim — no ownership judgement.
+
+    Use this for adapter METADATA (notably `access`). It returns the record even
+    when the uploader was unidentified, which matters because an anonymously
+    recorded upload can still carry an access group that must be preserved.
+    """
+    for event in reversed(read_log(base_model)):
+        if event.get("action") == "upload" and event.get("name") == name:
+            return event
+    return None
+
+
+def latest_upload(base_model: str, name: str) -> dict | None:
+    """The ownership record for an adapter, or None if it has no owner.
+
+    Use this for AUTHORIZATION only. A recorded user_id of "anonymous" is not
+    ownership: uploads made while identity was unenforced must not become
+    deletable by any other caller who also arrives unidentified. Callers that
+    want the adapter's metadata regardless of attribution want
+    latest_upload_event() instead — conflating the two silently drops the
+    access group of anonymously recorded uploads.
+    """
+    event = latest_upload_event(base_model, name)
+    if event is None or event.get("user_id", "anonymous") == "anonymous":
+        return None
+    return event
+
+
 def read_log(base_model: str) -> list[dict]:
     path = _log_path(base_model)
     if not path.exists():
