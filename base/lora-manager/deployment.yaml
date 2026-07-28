@@ -59,6 +59,11 @@ spec:
               mountPath: /adapters/gemma-4-31b
             - name: qwen-3-5-9b-adapters
               mountPath: /adapters/qwen-3-5-9b
+          # Readiness fails (503) when LiteLLM rejects LITELLM_MASTER_KEY, so a
+          # stale key shows up in `kubectl get pods` instead of only surfacing
+          # as a failed upload. Liveness deliberately uses /livez: restarting
+          # can't fix an unreachable LiteLLM, and a restart loop here would be
+          # worse than a NotReady pod that still answers /health with the reason.
           readinessProbe:
             httpGet:
               path: /health
@@ -67,7 +72,7 @@ spec:
             periodSeconds: 10
           livenessProbe:
             httpGet:
-              path: /health
+              path: /livez
               port: http
             initialDelaySeconds: 10
             periodSeconds: 20

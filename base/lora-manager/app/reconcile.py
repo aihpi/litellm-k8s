@@ -22,6 +22,8 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
+import httpx
+
 from . import audit, litellm_client, vllm_client
 from .config import (
     ADAPTERS_BASE_PATH,
@@ -39,9 +41,48 @@ INFLIGHT: set[tuple[str, str]] = set()
 
 LAST_RESULT: dict | None = None
 
+# Whether LiteLLM accepted our master key. None until the first attempt.
+# LITELLM_MASTER_KEY comes from a secretKeyRef, which is injected at pod start
+# and never refreshed, so rotating litellm-secret leaves this pod holding a dead
+# key — every /model/new and /model/delete then 401s while uploads appear to
+# work right up to the register step. Surfacing it on /health turns that into a
+# NotReady pod instead of a silent write failure.
+AUTH_OK: bool | None = None
+
 # Single replica (see deployment.yaml), so a plain lock is enough to keep the
 # periodic loop and a manual POST /reconcile from overlapping.
 _LOCK = asyncio.Lock()
+
+
+def _note_auth(exc: Exception | None) -> None:
+    global AUTH_OK
+    if exc is None:
+        if AUTH_OK is False:
+            log.info("litellm credentials accepted again")
+        AUTH_OK = True
+    elif isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code in (401, 403):
+        if AUTH_OK is not False:
+            log.error(
+                "litellm rejected LITELLM_MASTER_KEY (%s) — litellm-secret was "
+                "probably rotated after this pod started; "
+                "kubectl rollout restart deploy/lora-manager",
+                exc.response.status_code,
+            )
+        AUTH_OK = False
+    # Anything else (connection refused, timeout, 5xx) is LiteLLM being down,
+    # not a credential problem. Leave the last known verdict alone so a proxy
+    # restart doesn't drag this pod out of the Service.
+
+
+async def check_credentials() -> bool | None:
+    """One authenticated call, purely to classify the master key."""
+    try:
+        await litellm_client.list_registered_models()
+    except Exception as e:
+        _note_auth(e)
+    else:
+        _note_auth(None)
+    return AUTH_OK
 
 
 def adapter_names(base_model: str) -> list[str]:
@@ -167,9 +208,12 @@ async def reconcile_all() -> dict:
         except Exception as e:
             # Expected while LiteLLM is still coming up after a co-restart. The
             # vLLM half still runs; the next tick retries this half.
+            _note_auth(e)
             result["errors"].append(f"litellm model/info: {e}")
             log.warning("reconcile: LiteLLM unreachable (%s) — vLLM half only", e)
             registered = None
+        else:
+            _note_auth(None)
 
         for base_model in ALLOWED_BASE_MODELS:
             try:
@@ -197,6 +241,8 @@ async def reconcile_loop() -> None:
     """Background pass every RECONCILE_INTERVAL_SECONDS. Must never die."""
     if RECONCILE_INTERVAL_SECONDS <= 0:
         log.info("reconcile: background loop disabled (RECONCILE_INTERVAL_SECONDS=0)")
+        # Still classify the master key once, so /health reports it either way.
+        await check_credentials()
         return
     log.info("reconcile: loop starting, interval %ss", RECONCILE_INTERVAL_SECONDS)
     while True:

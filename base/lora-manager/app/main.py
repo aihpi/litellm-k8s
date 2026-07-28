@@ -100,9 +100,33 @@ def _require_ops(user_id: str, key_alias: str) -> None:
         raise HTTPException(status_code=403, detail="ops-only endpoint")
 
 
+@app.get("/livez")
+async def livez() -> dict:
+    """Liveness only. Never fails on a dependency — a restart can't fix LiteLLM."""
+    return {"status": "ok"}
+
+
 @app.get("/health")
-async def health() -> dict:
-    return {"status": "ok", "allowed_base_models": list(ALLOWED_BASE_MODELS)}
+async def health() -> JSONResponse:
+    """Readiness. 503 when the proxy rejects our master key, which a restart
+    *does* fix (it re-reads litellm-secret), so it belongs in readiness rather
+    than being discovered on the first failed upload."""
+    body = {
+        "status": "ok",
+        "allowed_base_models": list(ALLOWED_BASE_MODELS),
+        # True/False once checked, null before the first attempt or while
+        # LiteLLM is simply unreachable.
+        "litellm_auth_ok": reconcile.AUTH_OK,
+    }
+    if reconcile.AUTH_OK is False:
+        body["status"] = "unhealthy"
+        body["detail"] = (
+            "LiteLLM rejected LITELLM_MASTER_KEY — litellm-secret was likely "
+            "rotated after this pod started (env from secretKeyRef is not "
+            "refreshed). Fix: kubectl rollout restart deploy/lora-manager"
+        )
+        return JSONResponse(status_code=503, content=body)
+    return JSONResponse(status_code=200, content=body)
 
 
 @app.post("/upload")
