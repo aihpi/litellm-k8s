@@ -1,8 +1,13 @@
 # Cost Tracking
 
-Every model registered with LiteLLM carries a per-token cost, so each request
-writes a `spend` value to the `LiteLLM_SpendLogs` table in Postgres. That table is
-the basis for demand modelling, chargeback, and quota sizing.
+Every model registered with LiteLLM carries a cost, so each request writes a
+`spend` value to the `LiteLLM_SpendLogs` table in Postgres. That table is the
+basis for demand modelling, chargeback, and quota sizing.
+
+The pricing field depends on the model: text and embedding models use
+`input_cost_per_token` / `output_cost_per_token`, while `qwen-image-edit` is
+priced per image via `input_cost_per_image`. Any query that assumes token fields
+will report the image model as unpriced.
 
 The rates themselves — what they mean, where each number came from, and how to
 refresh them — are in [Model Pricing](model-pricing.md). Read that before drawing
@@ -68,7 +73,8 @@ against the configured rate directly:
 ```sql
 SELECT model_name,
        (litellm_params->>'input_cost_per_token')::float8  * 1e6 AS usd_per_1m_in,
-       (litellm_params->>'output_cost_per_token')::float8 * 1e6 AS usd_per_1m_out
+       (litellm_params->>'output_cost_per_token')::float8 * 1e6 AS usd_per_1m_out,
+       (litellm_params->>'input_cost_per_image')::float8       AS usd_per_image
 FROM "LiteLLM_ProxyModelTable";
 ```
 
@@ -85,8 +91,14 @@ cost registered, or the registered cost never reached the cost calculator.
 
    ```bash
    curl -sS "$LITELLM_URL/model/info" -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
-     | jq -r '.data[] | select((.litellm_params.input_cost_per_token // 0) == 0) | .model_name'
+     | jq -r '.data[]
+         | select((.litellm_params.input_cost_per_token // 0) == 0
+              and (.litellm_params.input_cost_per_image // 0) == 0)
+         | .model_name'
    ```
+
+   Both fields are checked so `qwen-image-edit`, which is priced per image, isn't
+   reported as unpriced.
 
 2. If the model is DB-registered, run [set-model-costs.sh](../scripts/set-model-costs.sh).
    If it is defined in [base/litellm/configmap.yaml](../base/litellm/configmap.yaml),

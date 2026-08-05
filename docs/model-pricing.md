@@ -171,8 +171,10 @@ export LITELLM_URL=https://api.aisc.hpi.de
 It reports three outcomes per model: `update` (DB row rewritten), `config`
 (config.yaml-backed — `/model/update` rejects these, set the cost in the
 configmap instead), and `skip` (not registered with the proxy). A model listed in
-both places has two rows; only the DB one is updated, and the config value is
-what the router actually uses for it.
+both places has two rows and only the DB one is updated — but the router
+load-balances across both deployments and each prices with its own fields, so
+the configmap value must be updated to match or that model's spend will vary
+per request. See [Keep config.yaml and the catalog in sync](#keep-configyaml-and-the-catalog-in-sync).
 
 Restart is not required — `/model/update` refreshes the router in place. Config
 map changes do need a rollout:

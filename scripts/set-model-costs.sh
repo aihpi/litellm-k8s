@@ -47,8 +47,10 @@ model_info=$(curl -sS -f "${LITELLM_URL}/model/info" -H "Authorization: Bearer $
 updated=0 skipped=0 config_only=0 failed=0
 
 # One "<model_name>\t<cost_json>" line per catalog entry that defines any *cost*
-# field. qwen-image-edit carries input_cost_per_pixel rather than token costs, so
-# match on the substring instead of the exact token-cost keys.
+# field. Not every model is priced per token: qwen-image-edit carries
+# input_cost_per_image, and LiteLLM accepts per-second and per-pixel fields too.
+# So match on the "cost" substring and forward whatever the catalog defines,
+# rather than looking for input/output_cost_per_token specifically.
 while IFS=$'\t' read -r name costs; do
   [ -n "${name}" ] || continue
 
@@ -102,15 +104,19 @@ echo "done: ${updated} ${verb}, ${skipped} skipped, ${config_only} config-only, 
 
 if [ "${DRY_RUN}" = false ] && [ "${failed}" -eq 0 ]; then
   echo
-  echo "Costs now visible to the proxy (USD per 1M tokens):"
+  echo "Costs now visible to the proxy:"
+  # Image models price per image, not per token, so report them on their own line
+  # instead of showing a misleading in=$0.0000 out=$0.0000.
   curl -sS -f "${LITELLM_URL}/model/info" -H "Authorization: Bearer ${MASTER_KEY}" \
     | jq -r '.data[]
       | [.model_name,
          ((.litellm_params.input_cost_per_token  // .model_info.input_cost_per_token  // 0) * 1000000),
-         ((.litellm_params.output_cost_per_token // .model_info.output_cost_per_token // 0) * 1000000)]
+         ((.litellm_params.output_cost_per_token // .model_info.output_cost_per_token // 0) * 1000000),
+         (.litellm_params.input_cost_per_image   // .model_info.input_cost_per_image   // 0)]
       | @tsv' \
     | sort -u \
-    | awk -F'\t' '{printf "  %-24s in=$%-8.4f out=$%.4f\n", $1, $2, $3}'
+    | awk -F'\t' '$4 > 0 { printf "  %-24s $%.4f / image\n", $1, $4; next }
+                         { printf "  %-24s in=$%-8.4f out=$%-8.4f / 1M tokens\n", $1, $2, $3 }'
 fi
 
 [ "${failed}" -eq 0 ]
