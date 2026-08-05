@@ -29,7 +29,6 @@ from . import audit, litellm_client, vllm_client
 from .config import (
     ADAPTERS_BASE_PATH,
     ALLOWED_BASE_MODELS,
-    RECONCILE_ADOPT_UNKNOWN,
     RECONCILE_INTERVAL_SECONDS,
 )
 
@@ -96,17 +95,6 @@ def _note_auth(exc: Exception | None) -> None:
     # Anything else (connection refused, timeout, 5xx) is LiteLLM being down,
     # not a credential problem. Leave the last known verdict alone so a proxy
     # restart doesn't drag this pod out of the Service.
-
-
-async def check_credentials() -> bool | None:
-    """One authenticated call, purely to classify the master key."""
-    try:
-        await litellm_client.list_registered_models()
-    except Exception as e:
-        _note_auth(e)
-    else:
-        _note_auth(None)
-    return AUTH_OK
 
 
 def adapter_names(base_model: str) -> list[str]:
@@ -191,12 +179,6 @@ async def _reconcile_base_model(base_model: str, registered: set[str] | None) ->
             # *owner*, and reading `access` through it would silently publish a
             # restricted adapter the moment it needed re-registering.
             record = audit.latest_upload_event(base_model, name)
-            if record is None and not RECONCILE_ADOPT_UNKNOWN:
-                out["errors"].append(
-                    f"litellm register {name}: no upload record and "
-                    "RECONCILE_ADOPT_UNKNOWN is off"
-                )
-                continue
             access = record.get("access") if record else None
             try:
                 async with adapter_lock(base_model, name):
@@ -293,7 +275,12 @@ async def reconcile_loop() -> None:
     if RECONCILE_INTERVAL_SECONDS <= 0:
         log.info("reconcile: background loop disabled (RECONCILE_INTERVAL_SECONDS=0)")
         # Still classify the master key once, so /health reports it either way.
-        await check_credentials()
+        try:
+            await litellm_client.list_registered_models()
+        except Exception as e:
+            _note_auth(e)
+        else:
+            _note_auth(None)
         return
     log.info("reconcile: loop starting, interval %ss", RECONCILE_INTERVAL_SECONDS)
     while True:

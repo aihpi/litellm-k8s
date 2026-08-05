@@ -48,7 +48,7 @@ The caller's key is passed to `/key/info` in the query string, so it must never 
 
 `REQUIRE_IDENTITY` (default **on**) rejects a request whose identity doesn't resolve, rather than recording `anonymous` — an adapter with no owner is one nobody can delete afterwards.
 
-A caller presenting `LITELLM_MASTER_KEY` is `master-key`, and counts as ops: it isn't a user, so it can't *own* anything, but it can delete anything. That makes `ADMIN_KEY_ALIASES` / `ADMIN_USER_IDS` purely for delegating ops to a personal key.
+A caller presenting `LITELLM_MASTER_KEY` is `master-key`, and is the only ops caller: it isn't a user, so it can't *own* anything, but it can delete anything. Adapters with no ownership record are also removable through the in-cluster `DELETE /adapters/{base_model}/{name}` route, which has no ops check at all.
 
 **Virtual keys must be allowed onto the route.** Without it the proxy rejects them before lora-manager sees the request: `Key/team not allowed to access passthrough route /v1/lora/upload`. Set `metadata.allowed_passthrough_routes` on the key or team (admin-only field) to include `/v1/lora/upload`, `/v1/lora/adapters`, `/v1/lora/delete`. This is why early uploads were all done with the master key — and therefore why they have no owner.
 
@@ -90,10 +90,7 @@ Assumes `replicas: 1`. If this is ever scaled up, passes need leader election (o
 | `MAX_UPLOAD_BYTES` | `4294967296` (4 GiB) | |
 | `MAX_LORA_RANK` | `64` | Matches `--max-lora-rank` on vLLM. Rejects higher-rank adapters. |
 | `REQUIRE_IDENTITY` | `true` | Reject requests whose caller can't be resolved via `/key/info`. Off allows unattributed (undeletable) uploads. |
-| `ADMIN_KEY_ALIASES` | (empty) | Extra key aliases counting as ops. The master key already does, so this is only for delegation. |
-| `ADMIN_USER_IDS` | (empty) | Same, matched on the resolved `user_id`. |
 | `RECONCILE_INTERVAL_SECONDS` | `300` | `0` disables the background loop; `POST /reconcile` still works. |
-| `RECONCILE_ADOPT_UNKNOWN` | `true` | Register adapter dirs with no upload record (no access group applied). Turn off if an adapter must be private-by-default. |
 
 ## Adapter contract
 
@@ -104,6 +101,8 @@ Uploads must be a `.tar.gz` containing a PEFT LoRA adapter:
 - Optionally `tokenizer.{json,model}`, `tokenizer_config.json`, `special_tokens_map.json`, `added_tokens.json`, `README.md`
 
 Anything else fails validation. Safetensors are parsed header-only (no tensor data loaded into memory).
+
+Extraction uses `tarfile.extractall(..., filter="data")` (PEP 706), which refuses `../` traversal, links pointing outside the destination, and device/FIFO members — so `validation.py` does not re-check those. One case the filter *sanitises* rather than refuses: an absolute member path like `/etc/pwned` is rewritten to `etc/pwned` inside the destination, and the filename allowlist above is what rejects it. `test_extract.py` pins both halves of that — run `python base/lora-manager/test_extract.py`. This matters because the container runs as root, so an unfiltered `extractall` would genuinely write outside the destination.
 
 ## Adapter naming
 

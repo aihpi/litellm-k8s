@@ -69,7 +69,17 @@ def validate_adapter_dir(adapter_dir: Path) -> dict:
     if not adapter_dir.is_dir():
         raise ValidationError(f"{adapter_dir} is not a directory")
 
-    files = [p for p in adapter_dir.rglob("*") if p.is_file()]
+    entries = list(adapter_dir.rglob("*"))
+
+    # tarfile's filter="data" only refuses symlinks that *escape* the destination,
+    # so contained ones survive extraction. A symlinked directory is not a file,
+    # so it would never reach the per-file allowlist below — reject every symlink
+    # up front instead. An adapter has no legitimate use for one.
+    for p in entries:
+        if p.is_symlink():
+            raise ValidationError(f"{p.relative_to(adapter_dir).as_posix()}: symlinks not allowed")
+
+    files = [p for p in entries if p.is_file()]
     if not files:
         raise ValidationError("archive contains no files")
 
@@ -79,15 +89,8 @@ def validate_adapter_dir(adapter_dir: Path) -> dict:
     total_bytes = 0
 
     for f in files:
-        # Reject anything escaping the adapter dir via symlinks or absolute paths.
-        try:
-            f.resolve().relative_to(adapter_dir.resolve())
-        except ValueError:
-            raise ValidationError(f"file {f} escapes adapter dir")
-
-        if f.is_symlink():
-            raise ValidationError(f"{f.name}: symlinks not allowed")
-
+        # No dir-escape check: filter="data" guarantees containment, refusing
+        # both absolute and relative link targets that leave the destination.
         rel = f.relative_to(adapter_dir).as_posix()
         # Reject hidden / dotfile shenanigans.
         if any(part.startswith(".") for part in f.relative_to(adapter_dir).parts):

@@ -27,3 +27,25 @@ jobs:
           ./kustomize build overlays/dev
           ./kustomize build overlays/staging
           ./kustomize build overlays/prod
+
+      # Archive-safety guards for lora-manager uploads. Stdlib only (tarfile +
+      # app.validation), so there is nothing to install.
+      - name: lora-manager extraction guards
+        run: python3 base/lora-manager/test_extract.py
+
+      # config.yaml and model-catalog.json both carry per-token costs and must
+      # agree — a model listed in both places becomes two router deployments,
+      # and mismatched costs make its spend vary per request.
+      - name: Model costs agree between config.yaml and catalog
+        run: |
+          pip install --quiet pyyaml
+          python3 -c '
+          import json, yaml, pathlib
+          cfg = yaml.safe_load(yaml.safe_load(pathlib.Path("base/litellm/configmap.yaml").read_text())["data"]["config.yaml"])
+          cat = {m["model_name"]: {k: v for k, v in m["litellm_params"].items() if "cost" in k}
+                 for m in json.loads(pathlib.Path("scripts/model-catalog.json").read_text())["models"]}
+          listed = cfg["model_list"]
+          bad = [m["model_name"] for m in listed
+                 if {k: v for k, v in m["litellm_params"].items() if "cost" in k} != cat.get(m["model_name"])]
+          assert not bad, "cost drift: %s" % bad
+          print("ok: %d models priced, %d in config.yaml" % (len(cat), len(listed)))'
