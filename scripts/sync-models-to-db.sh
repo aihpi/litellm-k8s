@@ -34,26 +34,19 @@ fi
 
 command -v jq >/dev/null 2>&1 || { echo "Error: jq is required." >&2; exit 1; }
 
-# One JSON payload per model, mirroring base/litellm/configmap.yaml where the
-# model is also listed there. Not registered here:
+# The catalog — one /model/new payload per model, including per-token costs —
+# lives in scripts/model-catalog.json so this script and set-model-costs.sh can't
+# drift apart on prices. It mirrors base/litellm/configmap.yaml where the model is
+# also listed there. Not registered here:
 #   - dinov3-embeddings-api: custom request schema (images: [...]), not
 #     OpenAI-compatible — cannot be routed through openai/* params.
-#   - llama-70b: manifests exist but not referenced in models/kustomization.yaml.
-MODELS=(
-'{"model_name":"llama-3b","litellm_params":{"model":"openai/llama-3b","api_base":"http://llama-3b-service:8000/v1","api_key":"dummy"}}'
-'{"model_name":"qwen-image-edit","litellm_params":{"model":"aihpi-provider/qwen-image-edit","api_base":"http://qwen-image-edit:8000/v1","api_key":"dummy"}}'
-'{"model_name":"octen-embedding-8b","litellm_params":{"model":"openai/octen-embedding-8b","api_base":"http://octen-embedding-8b-service:8000/v1","api_key":"dummy","encoding_format":"float"},"model_info":{"mode":"embedding"}}'
-'{"model_name":"gemma-4-31b","litellm_params":{"model":"openai/gemma-4-31b","api_base":"http://gemma-4-31b-service:8000/v1","api_key":"dummy"}}'
-'{"model_name":"qwen-3-5-9b","litellm_params":{"model":"openai/qwen-3-5-9b","api_base":"http://qwen-3-5-9b-service:8000/v1","api_key":"dummy","extra_body":{"chat_template_kwargs":{"enable_thinking":false}}}}'
-'{"model_name":"gpt-oss-120b","litellm_params":{"model":"openai/gpt-oss-120b","api_base":"http://gpt-oss-120b-service:8000/v1","api_key":"dummy"}}'
-'{"model_name":"llama-3-3-70b","litellm_params":{"model":"openai/llama-3-3-70b","api_base":"http://llama-3-3-70b-service:8000/v1","api_key":"dummy"}}'
-'{"model_name":"granite-4-h-tiny","litellm_params":{"model":"openai/granite-4-h-tiny","api_base":"http://granite-4-h-tiny-service:8000/v1","api_key":"dummy"}}'
-'{"model_name":"minilm-embedding","litellm_params":{"model":"openai/minilm-embedding","api_base":"http://minilm-embedding-service:8000/v1","api_key":"dummy"},"model_info":{"mode":"embedding"}}'
-'{"model_name":"qwen3-vl-embedding-8b","litellm_params":{"model":"openai/qwen3-vl-embedding-8b","api_base":"http://qwen3-vl-embedding-8b-service:8000/v1","api_key":"dummy"},"model_info":{"mode":"embedding"}}'
-'{"model_name":"qwen3-vl-32b","litellm_params":{"model":"openai/qwen3-vl-32b","api_base":"http://qwen3-vl-32b-service:8000/v1","api_key":"dummy"}}'
-'{"model_name":"ministral-3-14b","litellm_params":{"model":"openai/ministral-3-14b","api_base":"http://ministral-3-14b-service:8000/v1","api_key":"dummy"}}'
-'{"model_name":"qwen3-omni","litellm_params":{"model":"openai/qwen3-omni","api_base":"http://qwen3-omni-service:8000/v1","api_key":"dummy"}}'
-)
+CATALOG="$(dirname "$0")/model-catalog.json"
+[ -f "${CATALOG}" ] || { echo "Error: ${CATALOG} not found." >&2; exit 1; }
+
+# -c keeps each payload on a single line so one array element == one model.
+MODELS=()
+while IFS= read -r line; do MODELS+=("${line}"); done < <(jq -c '.models[]' "${CATALOG}")
+[ "${#MODELS[@]}" -gt 0 ] || { echo "Error: no models in ${CATALOG}." >&2; exit 1; }
 
 model_info=$(curl -sS -f "${LITELLM_URL}/model/info" -H "Authorization: Bearer ${MASTER_KEY}")
 

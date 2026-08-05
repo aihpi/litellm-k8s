@@ -119,23 +119,44 @@ data:
       # litellm_jwtauth:
       #   team_ids_jwt_field: "groups"
 
+    # Per-token costs (USD/token) let LiteLLM populate `spend` on every
+    # LiteLLM_SpendLogs row, which is what demand//cost modelling reads. They are
+    # reference market rates for the equivalent hosted model, NOT our GPU cost —
+    # see docs/model-pricing.md for each figure's source and how to refresh it.
+    #
+    # Two placement rules, both load-bearing:
+    #   1. Costs go in litellm_params, not model_info. POST /model/update (used to
+    #      backfill DB-registered models) persists litellm_params only. The router
+    #      copies these fields into the model cost map at load, so both work here —
+    #      keeping one placement keeps config.yaml and the DB catalog comparable.
+    #   2. Always write a decimal point: PyYAML (YAML 1.1) parses `5e-8` as a
+    #      *string* and only `5.0e-8` as a float.
     model_list:
       - model_name: llama-3b
         litellm_params:
           model: openai/llama-3b
           api_base: http://llama-3b-service:8000/v1
           api_key: dummy
+          input_cost_per_token: 5.0e-8    # $0.05 / 1M
+          output_cost_per_token: 3.3e-7   # $0.33 / 1M
       - model_name: qwen-image-edit
         litellm_params:
           model: aihpi-provider/qwen-image-edit
           api_base: http://qwen-image-edit:8000/v1
           api_key: dummy
+          # Image models bill per image, not per token: LiteLLM computes
+          # input_cost_per_image * n. $0.04 is the market average across
+          # mainstream image gen/edit APIs. Preferred over input_cost_per_pixel
+          # because it needs no height/width from the aihpi-provider response.
+          input_cost_per_image: 0.04
       - model_name: octen-embedding-8b
         litellm_params:
           model: openai/octen-embedding-8b
           api_base: http://octen-embedding-8b-service:8000/v1
           api_key: dummy
           encoding_format: float
+          input_cost_per_token: 4.0e-8    # $0.04 / 1M
+          output_cost_per_token: 0.0      # embeddings return no output tokens
         model_info:
           metadata:
             mode: embedding
@@ -144,6 +165,8 @@ data:
           model: openai/gemma-4-31b
           api_base: http://gemma-4-31b-service:8000/v1
           api_key: dummy
+          input_cost_per_token: 1.4e-7    # $0.14 / 1M
+          output_cost_per_token: 4.0e-7   # $0.40 / 1M
       - model_name: qwen-3-5-9b
         litellm_params:
           model: openai/qwen-3-5-9b
@@ -154,16 +177,22 @@ data:
           extra_body:
             chat_template_kwargs:
               enable_thinking: false
+          input_cost_per_token: 1.0e-7    # $0.10 / 1M
+          output_cost_per_token: 1.5e-7   # $0.15 / 1M
       - model_name: gpt-oss-120b
         litellm_params:
           model: openai/gpt-oss-120b
           api_base: http://gpt-oss-120b-service:8000/v1
           api_key: dummy
+          input_cost_per_token: 1.4e-7    # $0.14 / 1M
+          output_cost_per_token: 6.0e-7   # $0.60 / 1M
       - model_name: llama-3-3-70b
         litellm_params:
           model: openai/llama-3-3-70b
           api_base: http://llama-3-3-70b-service:8000/v1
           api_key: dummy
+          input_cost_per_token: 2.93e-7   # $0.293 / 1M
+          output_cost_per_token: 7.2e-7   # $0.72 / 1M
       # Example: registering a LoRA adapter served by vLLM as a separate model entry.
       # The served-model-name must match what vLLM exposes (preloaded via
       # --lora-modules NAME=path, or runtime-loaded via /v1/load_lora_adapter).

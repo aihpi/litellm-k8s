@@ -2,6 +2,17 @@
 
 Models deployed via [models/kustomization.yaml](../models/kustomization.yaml). All services listen on port 8000. Register new models with LiteLLM via [scripts/sync-models-to-db.sh](../scripts/sync-models-to-db.sh) (see [Adding Models](adding-models.md)).
 
+Per-token costs for every model below are in [Model Pricing](model-pricing.md); the registry payloads live in [scripts/model-catalog.json](../scripts/model-catalog.json).
+
+**Where each model is registered.** Only 7 of the 13 are in `config.yaml`; the rest exist solely as DB rows. This is intentional — the direction of travel is DB-as-source-of-truth, and listing a model in both places creates two router deployments (see [Model Pricing](model-pricing.md#keep-configyaml-and-the-catalog-in-sync)).
+
+| | config.yaml + DB | DB only |
+| --- | --- | --- |
+| Models | `llama-3b`, `llama-3-3-70b`, `gemma-4-31b`, `gpt-oss-120b`, `qwen-3-5-9b`, `octen-embedding-8b`, `qwen-image-edit` | `granite-4-h-tiny`, `ministral-3-14b`, `qwen3-omni`, `qwen3-vl-32b`, `qwen3-vl-embedding-8b`, `minilm-embedding` |
+| Costs set in | both, kept identical | [model-catalog.json](../scripts/model-catalog.json) |
+
+Not registered with LiteLLM: `dinov3-embeddings-api` — deployed and serving, but its usage is entirely unlogged.
+
 | Model | Service | Notes |
 | --- | --- | --- |
 | llama-3b | llama-3b-service | General instruction model (in `config.yaml` model_list; manifests applied out-of-band) |
@@ -18,5 +29,3 @@ Models deployed via [models/kustomization.yaml](../models/kustomization.yaml). A
 | qwen3-vl-embedding-8b | qwen3-vl-embedding-8b-service | Vision-language embedding model |
 | minilm-embedding | minilm-embedding-service | all-MiniLM-L6-v2 on text-embeddings-inference (CPU) |
 | dinov3-embeddings-api | dinov3-embeddings-api-service | Image embeddings (DINOv3); custom API (`images: [...]` payload), **not** OpenAI-compatible, not registered in LiteLLM |
-
-Present in `models/` but not deployed (not in kustomization): `llama-70b`.
