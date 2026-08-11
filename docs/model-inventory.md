@@ -7,7 +7,7 @@ Models deployed via [models/kustomization.yaml](../models/kustomization.yaml). A
 | llama-3b | llama-3b-service | General instruction model (in `config.yaml` model_list; manifests applied out-of-band) |
 | llama-3-3-70b | llama-3-3-70b-service | Llama 3.3 70B FP8, 32K context, single H100 |
 | gemma-4-31b | gemma-4-31b-service | Gemma 4 31B instruct |
-| gpt-oss-120b | gpt-oss-120b-service | GPT-OSS 120B; LoRA adapters enabled |
+| gpt-oss-120b | gpt-oss-120b-service | GPT-OSS 120B (`amd/gpt-oss-120b-w-mxfp4-a-fp8`, MXFP4 weights / FP8 activations) with KV-cache CPU offload; LoRA disabled (MoE+LoRA bug, see deployment.yaml) |
 | granite-4-h-tiny | granite-4-h-tiny-service | Granite 4 tiny instruct |
 | ministral-3-14b | ministral-3-14b-service | 14B instruct, tensor parallel on 2x A30; LoRA adapters enabled with auto-discovery |
 | qwen-3-5-9b | qwen-3-5-9b-service | Qwen 3.5 9B; thinking mode disabled proxy-wide by default |
