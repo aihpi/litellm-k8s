@@ -30,6 +30,8 @@ spec:
                       - vx04
       containers:
         - name: litellm
+          # To rollback: replace the tag with the pinned digest below.
+          # known-good: ghcr.io/aihpi/tool-litellm@sha256:39644e531d898e92f334618702e62837b05ac03e8531c26a055eb54a612e81af
           image: ghcr.io/aihpi/tool-litellm:aihpi-provider
           imagePullPolicy: Always
           command: ["litellm"]
