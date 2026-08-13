@@ -10,6 +10,10 @@ data:
       success_callback: ["prometheus"]
       require_auth_for_metrics_endpoint: false
 
+      default_internal_user_params:
+        models: ["no-default-models"]
+        teams: ["kisz-default"]
+
       # Disable per-user budget tracking in Prometheus — avoids a Postgres query
       # on every /metrics scrape, which was blocking the event loop for 5-23s.
       enable_end_user_cost_tracking_prometheus_only: false
@@ -105,8 +109,11 @@ data:
           auth: true
           forward_headers: true
 
-      litellm_jwtauth:
-        team_ids_jwt_field: "litellm_teams"
+      # Team assignment currently comes from litellm_settings.default_internal_user_params.teams,
+      # not from SSO. To drive it from Authentik instead, get groups created, then set this to
+      # "groups" and make each team_id match a group name exactly.
+      # litellm_jwtauth:
+      #   team_ids_jwt_field: "groups"
 
     model_list:
       - model_name: llama-3b
