@@ -38,6 +38,7 @@ data:
         # LiteLLM otherwise emits an absolute Location header built from the inbound
         # Host (the cluster IP/port pair), which is unreachable from the public LB.
         # With absolute_redirect off above, this 301 carries only the path.
+        location = / { return 301 /ui/; }
         location = /ui { return 301 /ui/; }
 
         if ($request_method = HEAD) {
