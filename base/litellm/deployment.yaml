@@ -11,6 +11,8 @@ spec:
       app: litellm
   template:
     metadata:
+      annotations:
+        rollout/restart: "2026-08-13T10:26:01Z"
       labels:
         app: litellm
     spec:
