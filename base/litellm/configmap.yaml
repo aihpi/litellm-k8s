@@ -14,6 +14,10 @@ data:
         models: ["no-default-models"]
         teams: ["kisz-default"]
 
+      key_generation_settings:
+        personal_key_generation:
+          allowed_user_roles: ["proxy_admin"]
+
       # Disable per-user budget tracking in Prometheus — avoids a Postgres query
       # on every /metrics scrape, which was blocking the event loop for 5-23s.
       enable_end_user_cost_tracking_prometheus_only: false
