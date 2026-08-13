@@ -11,6 +11,9 @@ data:
       # litellm 1.91.x does not read the STORE_MODEL_IN_DB env var.
       store_model_in_db: true
 
+      litellm_jwtauth:
+        team_ids_jwt_field: "litellm_teams"
+
     model_list:
       - model_name: llama-3b
         litellm_params:
