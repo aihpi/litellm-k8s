@@ -18,6 +18,3 @@ replicas:
   - name: litellm-proxy
     count: 2
 
-images:
-  - name: ghcr.io/aihpi/tool-litellm
-    digest: sha256:117657d98541e14374a1c14e383bb030f3f81ff4592f79954fc0ea7043a89532
