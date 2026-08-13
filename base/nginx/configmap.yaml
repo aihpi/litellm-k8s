@@ -31,6 +31,8 @@ data:
         # wrong port back to the browser.
         #  absolute_redirect off;
 
+        location = / { return 301 /ui/; }
+
         location = /metrics { return 403; }
         location ^~ /metrics/ { return 403; }
 
