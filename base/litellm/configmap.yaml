@@ -105,6 +105,9 @@ data:
           auth: true
           forward_headers: true
 
+      litellm_jwtauth:
+        team_ids_jwt_field: "litellm_teams"
+
     model_list:
       - model_name: llama-3b
         litellm_params:
