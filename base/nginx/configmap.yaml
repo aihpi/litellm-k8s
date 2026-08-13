@@ -29,7 +29,7 @@ data:
         # trailing-slash). Otherwise nginx builds an absolute URL using the listen port
         # 4100, which doesn't match what the LB/Caddy expose to clients and leaks the
         # wrong port back to the browser.
-        #  absolute_redirect off;
+        absolute_redirect off;
 
         location = / { return 301 /ui/; }
 
