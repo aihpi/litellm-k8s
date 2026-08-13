@@ -102,6 +102,8 @@ spec:
               value: "True"
             - name: LITELLM_HIDE_DEFAULT_CREDENTIALS_HINT
               value: "true"
+            - name: LITELLM_WORKER_STARTUP_HOOKS
+              value: "litellm.aihpi:register"
           volumeMounts:
             - name: litellm-config
               mountPath: /etc/litellm/config.yaml
