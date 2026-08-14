@@ -104,6 +104,8 @@ spec:
               value: "true"
             - name: LITELLM_WORKER_STARTUP_HOOKS
               value: "litellm.aihpi:register"
+            - name: DOCS_URL
+              value: "/docs"
           volumeMounts:
             - name: litellm-config
               mountPath: /etc/litellm/config.yaml
