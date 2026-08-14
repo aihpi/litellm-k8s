@@ -23,8 +23,11 @@ def _api_base(base_model: str) -> str:
 async def register_model(name: str, base_model: str, access: str | None) -> None:
     """Add a new model entry to LiteLLM pointing at the vLLM service.
 
-    Access group MUST be set at registration time. LiteLLM cannot retrofit
-    per-key visibility — see docs/plans/lora-adapter-upload-service.md.
+    Access group MUST be set at registration time: model_info.access_groups is
+    read only when the row is created, and LiteLLM exposes no way to retrofit
+    per-key visibility afterwards — changing it means delete + re-register. The
+    field name has moved across upstream releases (access_groups / team_id /
+    model_access_group); access_groups is correct for the pinned tool-litellm.
     """
     body = {
         "model_name": name,

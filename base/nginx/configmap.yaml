@@ -25,22 +25,12 @@ data:
       server {
         listen 4100;
 
-        # Emit relative Location headers on nginx-generated redirects (e.g. /ui -> /ui/
-        # trailing-slash). Otherwise nginx builds an absolute URL using the listen port
-        # 4100, which doesn't match what the LB/Caddy expose to clients and leaks the
-        # wrong port back to the browser.
         absolute_redirect off;
 
         location = / { return 301 /ui/; }
 
         location = /metrics { return 403; }
         location ^~ /metrics/ { return 403; }
-
-        # Short-circuit /ui -> /ui/ in nginx so LiteLLM never sees the no-slash form.
-        # LiteLLM otherwise emits an absolute Location header built from the inbound
-        # Host (the cluster IP/port pair), which is unreachable from the public LB.
-        # With absolute_redirect off above, this 301 carries only the path.
-        #  location = /ui { return 301 /ui/; }
 
         if ($request_method = HEAD) {
             return 200;

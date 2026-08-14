@@ -1,0 +1,155 @@
+{
+  "_comment": [
+    "Single source of truth for the LiteLLM model registry. Consumed by",
+    "scripts/sync-models-to-db.sh (POST /model/new) and scripts/set-model-costs.sh",
+    "(POST /model/update). Each entry is a literal /model/new payload.",
+    "",
+    "Cost fields live in litellm_params, NOT model_info: /model/update only",
+    "persists litellm_params (it reads model_info purely to resolve model_info.id),",
+    "so litellm_params is the only placement that works for both endpoints.",
+    "LiteLLM's router copies every CustomPricingLiteLLMParams field out of",
+    "litellm_params into the model cost map at load time, so cost tracking picks",
+    "them up either way. Floats skip the litellm_params encryption path, so these",
+    "stay readable as plain JSON numbers in Postgres.",
+    "",
+    "Costs are USD per token = (USD per 1M tokens) / 1e6. These are reference",
+    "market rates for the equivalent hosted model, not our GPU cost — see",
+    "docs/model-pricing.md for the per-model source and how to refresh."
+  ],
+  "models": [
+    {
+      "model_name": "llama-3b",
+      "litellm_params": {
+        "model": "openai/llama-3b",
+        "api_base": "http://llama-3b-service:8000/v1",
+        "api_key": "dummy",
+        "input_cost_per_token": 5.0e-8,
+        "output_cost_per_token": 3.3e-7
+      }
+    },
+    {
+      "model_name": "qwen-image-edit",
+      "litellm_params": {
+        "model": "aihpi-provider/qwen-image-edit",
+        "api_base": "http://qwen-image-edit:8000/v1",
+        "api_key": "dummy",
+        "input_cost_per_image": 0.04
+      }
+    },
+    {
+      "model_name": "octen-embedding-8b",
+      "litellm_params": {
+        "model": "openai/octen-embedding-8b",
+        "api_base": "http://octen-embedding-8b-service:8000/v1",
+        "api_key": "dummy",
+        "encoding_format": "float",
+        "input_cost_per_token": 4.0e-8,
+        "output_cost_per_token": 0.0
+      },
+      "model_info": { "mode": "embedding" }
+    },
+    {
+      "model_name": "gemma-4-31b",
+      "litellm_params": {
+        "model": "openai/gemma-4-31b",
+        "api_base": "http://gemma-4-31b-service:8000/v1",
+        "api_key": "dummy",
+        "input_cost_per_token": 1.4e-7,
+        "output_cost_per_token": 4.0e-7
+      }
+    },
+    {
+      "model_name": "qwen-3-5-9b",
+      "litellm_params": {
+        "model": "openai/qwen-3-5-9b",
+        "api_base": "http://qwen-3-5-9b-service:8000/v1",
+        "api_key": "dummy",
+        "extra_body": { "chat_template_kwargs": { "enable_thinking": false } },
+        "input_cost_per_token": 1.0e-7,
+        "output_cost_per_token": 1.5e-7
+      }
+    },
+    {
+      "model_name": "gpt-oss-120b",
+      "litellm_params": {
+        "model": "openai/gpt-oss-120b",
+        "api_base": "http://gpt-oss-120b-service:8000/v1",
+        "api_key": "dummy",
+        "input_cost_per_token": 1.4e-7,
+        "output_cost_per_token": 6.0e-7
+      }
+    },
+    {
+      "model_name": "llama-3-3-70b",
+      "litellm_params": {
+        "model": "openai/llama-3-3-70b",
+        "api_base": "http://llama-3-3-70b-service:8000/v1",
+        "api_key": "dummy",
+        "input_cost_per_token": 2.93e-7,
+        "output_cost_per_token": 7.2e-7
+      }
+    },
+    {
+      "model_name": "granite-4-h-tiny",
+      "litellm_params": {
+        "model": "openai/granite-4-h-tiny",
+        "api_base": "http://granite-4-h-tiny-service:8000/v1",
+        "api_key": "dummy",
+        "input_cost_per_token": 5.0e-8,
+        "output_cost_per_token": 1.0e-7
+      }
+    },
+    {
+      "model_name": "minilm-embedding",
+      "litellm_params": {
+        "model": "openai/minilm-embedding",
+        "api_base": "http://minilm-embedding-service:8000/v1",
+        "api_key": "dummy",
+        "input_cost_per_token": 5.0e-9,
+        "output_cost_per_token": 0.0
+      },
+      "model_info": { "mode": "embedding" }
+    },
+    {
+      "model_name": "qwen3-vl-embedding-8b",
+      "litellm_params": {
+        "model": "openai/qwen3-vl-embedding-8b",
+        "api_base": "http://qwen3-vl-embedding-8b-service:8000/v1",
+        "api_key": "dummy",
+        "input_cost_per_token": 4.0e-8,
+        "output_cost_per_token": 0.0
+      },
+      "model_info": { "mode": "embedding" }
+    },
+    {
+      "model_name": "qwen3-vl-32b",
+      "litellm_params": {
+        "model": "openai/qwen3-vl-32b",
+        "api_base": "http://qwen3-vl-32b-service:8000/v1",
+        "api_key": "dummy",
+        "input_cost_per_token": 1.04e-7,
+        "output_cost_per_token": 4.16e-7
+      }
+    },
+    {
+      "model_name": "ministral-3-14b",
+      "litellm_params": {
+        "model": "openai/ministral-3-14b",
+        "api_base": "http://ministral-3-14b-service:8000/v1",
+        "api_key": "dummy",
+        "input_cost_per_token": 2.0e-7,
+        "output_cost_per_token": 2.0e-7
+      }
+    },
+    {
+      "model_name": "qwen3-omni",
+      "litellm_params": {
+        "model": "openai/qwen3-omni",
+        "api_base": "http://qwen3-omni-service:8000/v1",
+        "api_key": "dummy",
+        "input_cost_per_token": 9.0e-7,
+        "output_cost_per_token": 9.0e-7
+      }
+    }
+  ]
+}

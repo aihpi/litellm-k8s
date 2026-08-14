@@ -4,11 +4,39 @@ kind: Kustomization
 namespace: litellm
 
 resources:
-  - ../../base-infra
+  - ../../base/postgres
+  - ../../base/qdrant
   - ../../models
   - litellm-dev-deployment.yaml
   - litellm-dev-service.yaml
   - litellm-dev-configmap.yaml
+
+# dev pins the CPU services to cpu-labelled nodes. base places them by
+# anti-affinity (NotIn vx01-04) instead, so the affinity block is removed rather
+# than left to AND with the nodeSelector — the intersection may be unschedulable.
+# JSON 6902 because strategic merge can't reliably drop a nested block; the same
+# reasoning applies to the nginx port patches in overlays/staging.
+patches:
+  - target:
+      kind: Deployment
+      name: postgres
+    patch: |-
+      - op: remove
+        path: /spec/template/spec/affinity
+      - op: add
+        path: /spec/template/spec/nodeSelector
+        value:
+          node-type: cpu
+  - target:
+      kind: Deployment
+      name: qdrant
+    patch: |-
+      - op: remove
+        path: /spec/template/spec/affinity
+      - op: add
+        path: /spec/template/spec/nodeSelector
+        value:
+          node-type: cpu
 
 replicas:
   - name: litellm-proxy-dev

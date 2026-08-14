@@ -15,11 +15,8 @@ from fastapi.responses import JSONResponse
 from . import audit, litellm_client, reconcile, validation, vllm_client
 from .config import (
     ADAPTERS_BASE_PATH,
-    ADMIN_KEY_ALIASES,
-    ADMIN_USER_IDS,
     ALLOWED_BASE_MODELS,
     LITELLM_MASTER_KEY,
-    LOG_HEADERS_ON_UPLOAD,
     MAX_UPLOAD_BYTES,
     REQUIRE_IDENTITY,
 )
@@ -98,14 +95,6 @@ async def _identity(
     have no owner, which is the one reason those routes exist. They still get
     Identity("anonymous", ...), which is never ops.
     """
-    if LOG_HEADERS_ON_UPLOAD:
-        # Redact bearer tokens before logging.
-        safe = {
-            k: ("Bearer <redacted>" if k.lower() == "authorization" else v)
-            for k, v in request.headers.items()
-        }
-        log.info("incoming request headers: %s", safe)
-
     token = _bearer(request)
     if token and LITELLM_MASTER_KEY and token == LITELLM_MASTER_KEY:
         return Identity("master-key", "master-key", True)
@@ -173,15 +162,10 @@ def _adapter_dir(base_model: str, name: str) -> Path:
 def _is_ops(ident: Identity) -> bool:
     """Ops callers can delete any adapter and trigger a manual reconcile.
 
-    The master key qualifies unconditionally — it's the admin credential, and
-    relying on it means ADMIN_KEY_ALIASES only matters for delegating ops to
-    someone's personal key.
+    The master key is the admin credential. Adapters with no ownership record
+    are also removable via the in-cluster DELETE route, which has no ops check.
     """
-    return (
-        ident.is_master
-        or ident.user_id in ADMIN_USER_IDS
-        or ident.key_alias in ADMIN_KEY_ALIASES
-    )
+    return ident.is_master
 
 
 def _require_ops(ident: Identity) -> None:
@@ -261,11 +245,15 @@ async def upload(
                 sha.update(chunk)
                 out.write(chunk)
 
-        # Extract with hardening: reject absolute paths, ../, symlinks, devices.
+        # filter="data" (PEP 706, stdlib since 3.11.4) refuses ../ traversal,
+        # symlinks/hardlinks pointing outside, and device/FIFO members. Absolute
+        # member paths are sanitised into extract_to rather than refused, so
+        # /etc/pwned lands as etc/pwned — contained, and then rejected by
+        # validate_adapter_dir's filename allowlist below. See test_extract.py.
         extract_to.mkdir(parents=True, exist_ok=False)
         try:
             with tarfile.open(tarball, "r:*") as tar:
-                _safe_extract(tar, extract_to)
+                tar.extractall(extract_to, filter="data")
         except (tarfile.TarError, ValueError) as e:
             raise HTTPException(status_code=400, detail=f"tar extraction failed: {e}")
 
@@ -525,17 +513,3 @@ async def reconcile_now(
     )
     _require_ops(ident)
     return await reconcile.reconcile_all()
-
-
-def _safe_extract(tar: tarfile.TarFile, dest: Path) -> None:
-    """tarfile.extractall but blocks path traversal, abs paths, and special files."""
-    dest_resolved = dest.resolve()
-    for member in tar.getmembers():
-        if member.isdev() or member.issym() or member.islnk():
-            raise ValueError(f"refusing to extract special file: {member.name}")
-        target = (dest / member.name).resolve()
-        try:
-            target.relative_to(dest_resolved)
-        except ValueError:
-            raise ValueError(f"path traversal in archive: {member.name}")
-    tar.extractall(dest)

@@ -134,23 +134,9 @@ The vLLM pod is now serving, but the LiteLLM gateway doesn't know about it yet. 
 2. Go to `http://api.aisc.hpi.de/ui/login/` and log in.
 3. Add the model through the UI.
 
-### Option B: `add-model.sh` script
+Fill in the input/output cost fields while you're there — a model registered without them logs `spend = 0` (see [Model Pricing](model-pricing.md)).
 
-```bash
-export LITELLM_MASTER_KEY=<your-master-key>
-export LITELLM_URL=http://api.aisc.hpi.de
-./scripts/add-model.sh <model-name> <service-name> [port]
-```
-
-Example:
-
-```bash
-./scripts/add-model.sh llama-3-3-70b llama-3-3-70b-service 8000
-```
-
-The script calls `/model/new` on the LiteLLM proxy, which stores the registration in Postgres. This is a **one-time step** per model — you don't need to re-register after redeploying or restarting the vLLM pod.
-
-### Option C: bulk sync (`sync-models-to-db.sh`)
+### Option B: bulk sync (`sync-models-to-db.sh`)
 
 To register every deployed model in one go (fresh DB, disaster recovery, or after adding several models):
 
@@ -161,7 +147,9 @@ export LITELLM_URL=https://api.aisc.hpi.de
 ./scripts/sync-models-to-db.sh --all    # also DB-registers models from config.yaml
 ```
 
-The script is idempotent — model names already known to the proxy are skipped. When you add a new model to the cluster, also add its payload to the `MODELS` catalog in the script so the registry stays reproducible.
+The script is idempotent — model names already known to the proxy are skipped. When you add a new model to the cluster, also add its payload to [scripts/model-catalog.json](../scripts/model-catalog.json) so the registry stays reproducible.
+
+**Include costs in the payload.** Token and embedding models need `input_cost_per_token` and `output_cost_per_token` in `litellm_params`; image models need `input_cost_per_image` instead (LiteLLM checks it before `input_cost_per_pixel`). Without one of these, every request for the model writes `spend = 0` to `LiteLLM_SpendLogs` and it becomes invisible to demand and chargeback reporting. [Model Pricing](model-pricing.md) explains how to source a rate and covers two traps: costs must go in `litellm_params` (not `model_info`) for `/model/update` to persist them, and YAML needs `5.0e-8` rather than `5e-8` or the value parses as a string. To backfill a model that is already registered, use [scripts/set-model-costs.sh](../scripts/set-model-costs.sh) — `/model/new` skips known names, so it cannot add prices retroactively.
 
 > **Persistence requires two things** (both in place since July 2026): `store_model_in_db: true` under `general_settings` in [base/litellm/configmap.yaml](../base/litellm/configmap.yaml) — the `STORE_MODEL_IN_DB` env var is **ignored** by litellm 1.91.x — and a stable `LITELLM_SALT_KEY` in `litellm-secret`. Without the former, DB models are not loaded at startup; if the salt key (or, when unset, the master key it falls back to) changes, existing DB rows become undecryptable and are silently dropped.
 
@@ -329,7 +317,7 @@ curl https://api.aisc.hpi.de/v1/chat/completions \
 
 To list uploaded adapters: `GET /v1/lora/adapters` with the same auth header. To remove one: `DELETE /v1/lora/adapters/{base_model}/{name}` (currently requires cluster-internal access).
 
-**Access groups are mandatory at upload time** if you want the adapter to be visible only to specific keys. LiteLLM cannot retrofit per-key visibility after registration — see [docs/plans/lora-adapter-upload-service.md](plans/lora-adapter-upload-service.md) for the rationale. Omit `access` to make the adapter visible to every LiteLLM key.
+**Access groups are mandatory at upload time** if you want the adapter to be visible only to specific keys. `model_info.access_groups` is read only when the router row is created and LiteLLM exposes no way to retrofit per-key visibility, so changing it means delete + re-upload. Omit `access` to make the adapter visible to every LiteLLM key.
 
 ### Getting adapter weights onto the PVC (fallback)
 
@@ -382,7 +370,7 @@ The list contains the base served-model-name plus every currently-loaded adapter
 
 ### Registering a LoRA-served name with LiteLLM
 
-Each adapter can be registered as a separate `model_list` entry pointing at the same vLLM service. There's a commented example in `base/litellm/configmap.yaml`; either add an entry there or register at runtime via the LiteLLM UI / `add-model.sh` (the `served-model-name` you give LiteLLM must match the `lora_name` exposed by vLLM).
+Each adapter can be registered as a separate `model_list` entry pointing at the same vLLM service. There's a commented example in `base/litellm/configmap.yaml`; either add an entry there or register at runtime via the LiteLLM UI (the `served-model-name` you give LiteLLM must match the `lora_name` exposed by vLLM). Uploading through [lora-manager](uploading-loras.md) does this registration for you.
 
 ### Security note
 
@@ -398,7 +386,7 @@ Each adapter can be registered as a separate `model_list` entry pointing at the 
 | `CrashLoopBackOff`                | Repeated startup failures            | Check logs, fix config, rollout restart          |
 | ConfigMap change ignored          | Pod not restarted                    | `kubectl rollout restart deploy/<n> -n litellm`  |
 | Slow first startup (10–30 min)    | Downloading weights from HuggingFace | Wait; PVC caches for next time                   |
-| Model not in LiteLLM `/v1/models` | Not registered with gateway          | Register via UI or `add-model.sh`                |
+| Model not in LiteLLM `/v1/models` | Not registered with gateway          | Register via UI or `sync-models-to-db.sh`        |
 | UI-added models gone after LiteLLM restart | `store_model_in_db: true` missing from `general_settings` (the `STORE_MODEL_IN_DB` env var is ignored by litellm 1.91.x), or the salt/master key changed | Keep the flag in the configmap; keep `LITELLM_SALT_KEY` stable; re-run `sync-models-to-db.sh` |
 
 ## Useful commands

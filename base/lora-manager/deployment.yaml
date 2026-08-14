@@ -53,13 +53,6 @@ spec:
             # so the bearer token is the only signal; see README.
             - name: REQUIRE_IDENTITY
               value: "true"
-            # Extra callers counting as ops (delete anything, POST /reconcile).
-            # LITELLM_MASTER_KEY already qualifies, so these are only needed to
-            # delegate ops to someone's personal key.
-            - name: ADMIN_KEY_ALIASES
-              value: ""
-            - name: ADMIN_USER_IDS
-              value: ""
             # Re-load adapters missing from vLLM and re-register ones missing
             # from LiteLLM's router every 5 min. 0 disables the loop but keeps
             # POST /reconcile.
