@@ -51,3 +51,7 @@ REQUIRE_IDENTITY = _bool(os.environ.get("REQUIRE_IDENTITY"), True)
 # Dump all incoming headers to the log on each /upload. Answered its question
 # (see above) — off by default now; flip on to debug a new proxy version.
 LOG_HEADERS_ON_UPLOAD = _bool(os.environ.get("LOG_HEADERS_ON_UPLOAD"), False)
+
+# Access group applied to every uploaded adapter when the caller does not
+# supply an explicit `access` field. Empty string disables the default.
+DEFAULT_ACCESS_GROUP = os.environ.get("DEFAULT_ACCESS_GROUP", "").strip() or None

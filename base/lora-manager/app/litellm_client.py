@@ -1,6 +1,6 @@
 import httpx
 
-from .config import LITELLM_MASTER_KEY, LITELLM_URL
+from .config import DEFAULT_ACCESS_GROUP, LITELLM_MASTER_KEY, LITELLM_URL
 
 
 def _headers() -> dict:
@@ -34,8 +34,9 @@ async def register_model(name: str, base_model: str, access: str | None) -> None
             "api_key": "dummy",
         },
     }
-    if access:
-        body["model_info"] = {"access_groups": [access]}
+    effective_access = access or DEFAULT_ACCESS_GROUP
+    if effective_access:
+        body["model_info"] = {"access_groups": [effective_access]}
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         r = await client.post(f"{LITELLM_URL}/model/new", json=body, headers=_headers())

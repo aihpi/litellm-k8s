@@ -65,6 +65,8 @@ spec:
             # POST /reconcile.
             - name: RECONCILE_INTERVAL_SECONDS
               value: "300"
+            - name: DEFAULT_ACCESS_GROUP
+              value: "lora-uploaders"
           volumeMounts:
             - name: ministral-3-14b-adapters
               mountPath: /adapters/ministral-3-14b
