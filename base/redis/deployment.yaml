@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  labels:
+    app: redis
+spec:
+  # Coordination state only — rate-limit counters, pre-flush spend accumulators
+  # and the leader locks for the housekeeping jobs. Never more than one replica:
+  # two independent Redises would reintroduce exactly the split-brain counters
+  # this exists to fix. Recreate over RollingUpdate for the same reason.
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: NotIn
+                    values:
+                      - vx01
+                      - vx02
+                      - vx03
+                      - vx04
+      containers:
+        - name: redis
+          image: redis:8.10-alpine
+          # No persistence (--save "" --appendonly no): every key here is
+          # reconstructible — counters refill within one window and spend
+          # reconciles to Postgres, which is the durable store. A restart
+          # therefore costs a brief window of per-pod counting, not data.
+          #
+          # maxmemory is a safety valve, not a working limit: the whole keyspace
+          # is a few thousand small counters, orders of magnitude under 200mb.
+          # allkeys-lru rather than noeviction so a runaway keyspace degrades to
+          # evicted counters instead of write errors on the request path.
+          command: ["sh", "-c"]
+          args:
+            - >-
+              exec redis-server
+              --save ""
+              --appendonly no
+              --maxmemory 200mb
+              --maxmemory-policy allkeys-lru
+              --requirepass "$REDIS_PASSWORD"
+          ports:
+            - name: redis
+              containerPort: 6379
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: litellm-secret
+                  key: REDIS_PASSWORD
+            # redis-cli reads REDISCLI_AUTH from the environment, so the probes
+            # below authenticate without putting the password in argv (where it
+            # would show up in ps) or tripping the -a deprecation warning.
+            - name: REDISCLI_AUTH
+              valueFrom:
+                secretKeyRef:
+                  name: litellm-secret
+                  key: REDIS_PASSWORD
+          readinessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 2
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi

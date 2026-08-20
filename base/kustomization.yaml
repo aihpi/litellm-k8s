@@ -7,6 +7,8 @@ resources:
   - postgres/pvc.yaml
   - postgres/deployment.yaml
   - postgres/service.yaml
+  - redis/deployment.yaml
+  - redis/service.yaml
   - nginx/configmap.yaml
   - nginx/deployment.yaml
   - nginx/service.yaml

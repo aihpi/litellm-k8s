@@ -106,6 +106,22 @@ spec:
               value: "litellm.aihpi:register"
             - name: DOCS_URL
               value: "/docs"
+            # Coordination Redis. Prod runs 2 replicas, so without a shared
+            # store each pod keeps its own in-memory counters: a 100 RPM limit
+            # admits 200, team/key budgets overshoot before they reconcile to
+            # Postgres, and both pods run the housekeeping jobs (budget resets,
+            # spend-log cleanup, DB flush) instead of one elected runner.
+            # These vars alone do nothing — general_settings.coordination_redis
+            # in config.yaml is what reads them.
+            - name: REDIS_HOST
+              value: "redis-service"
+            - name: REDIS_PORT
+              value: "6379"
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: litellm-secret
+                  key: REDIS_PASSWORD
           volumeMounts:
             - name: litellm-config
               mountPath: /etc/litellm/config.yaml
