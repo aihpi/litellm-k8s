@@ -16,6 +16,15 @@ data:
       # litellm 1.91.x does not read the STORE_MODEL_IN_DB env var.
       store_model_in_db: true
 
+      # Staging runs a single replica, so the shared counters matter less here
+      # than in prod — kept for parity so this gets exercised before prod, and
+      # so /health/readiness reports show_no_redis_warning=false in both.
+      # NOT litellm_settings.cache: that would also enable LLM response caching.
+      coordination_redis:
+        host: os.environ/REDIS_HOST
+        port: os.environ/REDIS_PORT
+        password: os.environ/REDIS_PASSWORD
+
       # Team assignment currently comes from litellm_settings.default_internal_user_params.teams,
       # not from SSO. To drive it from Authentik instead, get groups created, then set this to
       # "groups" and make each team_id match a group name exactly.

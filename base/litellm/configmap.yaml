@@ -90,6 +90,25 @@ data:
       # rows survive; they just never get loaded).
       store_model_in_db: true
 
+      # Shared counters across the 2 prod replicas: rate limits, team/key spend
+      # before it flushes to Postgres, single-runner election for the
+      # housekeeping jobs, and one health-check per deployment instead of one
+      # per pod. Also what clears the "No Redis configured" banner in the UI.
+      #
+      # This block is deliberately NOT the litellm_settings.cache snippet from
+      # the "What Needs Redis" docs page. That one also switches on LLM response
+      # caching, so identical prompts start being served stored answers instead
+      # of hitting the model — a user-visible behaviour change. coordination_redis
+      # gives the shared counters without touching response caching.
+      #
+      # REDIS_HOST/REDIS_PORT/REDIS_PASSWORD in the deployment do nothing on
+      # their own: the bare REDIS_* fallback is only read inside the cache init
+      # path, so this block is what actually wires them up.
+      coordination_redis:
+        host: os.environ/REDIS_HOST
+        port: os.environ/REDIS_PORT
+        password: os.environ/REDIS_PASSWORD
+
       # Routes the user-facing /v1/lora/* paths to the internal lora-manager
       # service. `auth: true` gates on the caller's LiteLLM API key (rather
       # than master-only). `forward_headers: true` makes LiteLLM pass user
