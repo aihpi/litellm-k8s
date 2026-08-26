@@ -203,6 +203,11 @@ data:
           model: openai/gpt-oss-120b
           api_base: http://gpt-oss-120b-service:8000/v1
           api_key: dummy
+          # Drop request params the vLLM backend does not accept instead of
+          # returning 400. Clients aimed at hosted reasoning models send
+          # params gpt-oss/vLLM has no equivalent for (e.g. reasoning_effort),
+          # which would otherwise fail the whole request.
+          drop_params: true
           input_cost_per_token: 1.4e-7    # $0.14 / 1M
           output_cost_per_token: 6.0e-7   # $0.60 / 1M
       - model_name: llama-3-3-70b
