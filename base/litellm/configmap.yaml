@@ -10,6 +10,19 @@ data:
       success_callback: ["prometheus"]
       require_auth_for_metrics_endpoint: false
 
+      # Backstop: drop request params a backend does not support rather than
+      # failing the whole request with a 400. Proxy-wide because that is the
+      # only scope that covers a model_name served by BOTH a config.yaml row
+      # and a DB row — a per-model value only reaches the config row, and
+      # simple-shuffle sends roughly half the traffic to the other one.
+      #
+      # NOT the fix for reasoning_effort on gpt-oss — that is the hosted_vllm/
+      # prefix below. Note this also cannot save a *supported* param carrying
+      # an invalid value: vLLM types reasoning_effort as
+      # Literal["low","medium","high"], so "xhigh" is rejected by vLLM itself,
+      # well past the point drop_params applies.
+      drop_params: true
+
       default_internal_user_params:
         models: ["no-default-models"]
         teams: ["kisz-default"]
@@ -200,14 +213,16 @@ data:
           output_cost_per_token: 1.5e-7   # $0.15 / 1M
       - model_name: gpt-oss-120b
         litellm_params:
-          model: openai/gpt-oss-120b
+          # hosted_vllm/, NOT openai/: hosted_vllm's get_supported_openai_params
+          # extends the list with reasoning_effort + thinking
+          # (llms/hosted_vllm/chat/transformation.py:90-93), so reasoning_effort is
+          # forwarded to vLLM and actually takes effect. Under openai/ the generic
+          # OpenAI config only allows it for recognised reasoning model names, so
+          # gpt-oss-120b got a 400 (BerriAI/litellm#18543). vLLM types the value as
+          # Literal["low","medium","high"] — anything else is rejected downstream.
+          model: hosted_vllm/gpt-oss-120b
           api_base: http://gpt-oss-120b-service:8000/v1
           api_key: dummy
-          # Drop request params the vLLM backend does not accept instead of
-          # returning 400. Clients aimed at hosted reasoning models send
-          # params gpt-oss/vLLM has no equivalent for (e.g. reasoning_effort),
-          # which would otherwise fail the whole request.
-          drop_params: true
           input_cost_per_token: 1.4e-7    # $0.14 / 1M
           output_cost_per_token: 6.0e-7   # $0.60 / 1M
       - model_name: llama-3-3-70b
