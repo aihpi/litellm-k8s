@@ -232,6 +232,18 @@ data:
           api_key: dummy
           input_cost_per_token: 2.93e-7   # $0.293 / 1M
           output_cost_per_token: 7.2e-7   # $0.72 / 1M
+      - model_name: qwen3-8-27b
+        litellm_params:
+          # hosted_vllm/, NOT openai/: Qwen3.8 exposes a reasoning_effort dial and
+          # only hosted_vllm forwards that param, same reason as gpt-oss-120b above.
+          # vLLM types the value Literal["low","medium","high"], so the model card's
+          # "xhigh" default is not passable through this API — callers who want the
+          # deepest setting cannot get it, and anything else 400s past drop_params.
+          model: hosted_vllm/qwen3-8-27b
+          api_base: http://qwen3-8-27b-service:8000/v1
+          api_key: dummy
+          input_cost_per_token: 4.0e-7    # $0.40 / 1M
+          output_cost_per_token: 3.0e-6   # $3.00 / 1M
       # Example: registering a LoRA adapter served by vLLM as a separate model entry.
       # The served-model-name must match what vLLM exposes (preloaded via
       # --lora-modules NAME=path, or runtime-loaded via /v1/load_lora_adapter).

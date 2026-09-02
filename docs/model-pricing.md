@@ -51,6 +51,7 @@ USD per 1M tokens. `n` = number of serverless providers surveyed.
 | `qwen-3-5-9b` | qwen/qwen3.5-9b | 0.10 | 0.15 | 5 | median (in 0.10–0.17, out 0.15–0.25) |
 | `qwen3-vl-32b` | qwen/qwen3-vl-32b-instruct | 0.104 | 0.416 | 1 | sole provider |
 | `qwen3-omni` | qwen/qwen3-omni-30b-a3b-instruct | 0.90 | 0.90 | 1 | **weakest figure** — see note |
+| `qwen3-8-27b` | qwen/qwen3.8-27b | 0.40 | 3.00 | 12 | median (in 0.32–0.48, out 2.50–3.40) |
 | `octen-embedding-8b` | qwen/qwen3-embedding-8b | 0.04 | 0 | 5 | median (0.01–0.10) |
 | `qwen3-vl-embedding-8b` | qwen/qwen3-embedding-8b | 0.04 | 0 | 5 | **proxy** — same as above |
 | `minilm-embedding` | sentence-transformers/all-MiniLM-L6-v2 | 0.005 | 0 | 1 | sole provider |

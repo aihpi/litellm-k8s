@@ -150,6 +150,16 @@
         "input_cost_per_token": 9.0e-7,
         "output_cost_per_token": 9.0e-7
       }
+    },
+    {
+      "model_name": "qwen3-8-27b",
+      "litellm_params": {
+        "model": "hosted_vllm/qwen3-8-27b",
+        "api_base": "http://qwen3-8-27b-service:8000/v1",
+        "api_key": "dummy",
+        "input_cost_per_token": 4.0e-7,
+        "output_cost_per_token": 3.0e-6
+      }
     }
   ]
 }
