@@ -40,3 +40,7 @@ resources:
   - qwen-3-5-9b/pvc.yaml
   - qwen-3-5-9b/deployment.yaml
   - qwen-3-5-9b/service.yaml
+  - qwen3-8-27b/configmap.yaml
+  - qwen3-8-27b/pvc.yaml
+  - qwen3-8-27b/deployment.yaml
+  - qwen3-8-27b/service.yaml

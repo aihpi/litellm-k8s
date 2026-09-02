@@ -1,0 +1,120 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qwen3-8-27b
+  labels:
+    app: qwen3-8-27b
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: qwen3-8-27b
+  template:
+    metadata:
+      labels:
+        app: qwen3-8-27b
+    spec:
+      # No runtimeClassName: the two workloads already running on gx13v2
+      # (gpt-oss-120b, llama-3-3-70b) omit it. Only the a30 deployments set it.
+      nodeSelector:
+        accelerator: h100
+      containers:
+        - name: vllm
+          # Digest that vllm/vllm-openai:cu130-nightly resolved to for the
+          # Qwen3.8 deployment running in namespace llm since 2026-08-18.
+          # Pinned rather than tracking the nightly tag, per the convention in
+          # gpt-oss-120b / gemma-4-31b / qwen-3-5-9b.
+          #
+          # Not the v0.27.1 digest used by gpt-oss-120b: that build predates
+          # Qwen3.8 (released 2026-08-14) and has no kernels for its Gated
+          # DeltaNet layers. cu130 needs an r580+ host driver; gx13v2 reports
+          # 590.48.01 / CUDA 13.1, so it qualifies.
+          #
+          # Caveat: this digest is proven on gx34 (Blackwell), not yet on
+          # Hopper. If it fails to load, that is the first thing to suspect.
+          image: vllm/vllm-openai@sha256:3dbe092ec5b2cef63b6104d33fa75d6ce53a7870962529ada69f78bbbc38e776
+          args:
+            # FP8 rather than the BF16 checkpoint the llm-namespace copy runs:
+            # that one sits on a 96GiB card, this is an 80GiB H100. FP8 weights
+            # are ~29GiB vs ~52GiB, leaving ~46GiB for KV instead of ~24GiB.
+            # Official checkpoint, block-128 E4M3, vision tower kept in BF16.
+            - "--model"
+            - "Qwen/Qwen3.8-27B-FP8"
+            - "--served-model-name"
+            - "qwen3-8-27b"
+            - "--config"
+            - "/etc/vllm/QWEN38-27B_Hopper.yaml"
+            - "--tensor-parallel-size"
+            - "1"
+            - "--trust-remote-code"
+            - "--reasoning-parser"
+            - "qwen3"
+            - "--tool-call-parser"
+            - "qwen3_coder"
+            - "--enable-auto-tool-choice"
+            # 0.95, not 0.90: since vLLM v0.21 the profiler reserves estimated
+            # CUDA graph memory inside this budget, so 0.90 leaves less for KV
+            # than it used to (documented on gpt-oss-120b, measured 2026-08-11).
+            - "--gpu-memory-utilization"
+            - "0.95"
+            - "--port"
+            - "8000"
+          ports:
+            - containerPort: 8000
+          # vLLM needs minutes to load; without these the pod reports Ready as
+          # soon as the container execs and LiteLLM routes into a dead backend.
+          # That was the root cause of the 2026-08-07 silent outage, recorded on
+          # gpt-oss-120b. Same shape and timings here.
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            periodSeconds: 15
+            failureThreshold: 120
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 5
+          env:
+            - name: PYTORCH_ALLOC_CONF
+              value: "expandable_segments:True"
+            - name: HUGGING_FACE_HUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: litellm-secret
+                  key: HF_TOKEN
+          volumeMounts:
+            - name: model-cache
+              mountPath: /root/.cache/huggingface
+            - name: vllm-config
+              mountPath: /etc/vllm
+          # Deliberately below the 32 CPU / 192Gi that gpt-oss-120b and
+          # llama-3-3-70b request. gx13v2 is a 100-core node already at 64%
+          # CPU requests from those two; a third 32-core request would put it
+          # at 96% and leave nothing schedulable. A 27B model on one GPU does
+          # not need 32 reserved cores. Raise if throughput proves CPU-bound.
+          resources:
+            limits:
+              nvidia.com/gpu: "1"
+              memory: "128Gi"
+              cpu: "32"
+            requests:
+              nvidia.com/gpu: "1"
+              memory: "96Gi"
+              cpu: "16"
+      volumes:
+        - name: model-cache
+          persistentVolumeClaim:
+            claimName: qwen3-8-27b-cache
+        - name: vllm-config
+          configMap:
+            name: qwen3-8-27b-config

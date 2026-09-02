@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: qwen3-8-27b-cache
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: nfs-k8s-general
+  resources:
+    requests:
+      storage: 100Gi

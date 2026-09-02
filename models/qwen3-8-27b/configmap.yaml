@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: qwen3-8-27b-config
+data:
+  QWEN38-27B_Hopper.yaml: |
+    # Qwen3.8's native context is 262144. The copy in namespace llm runs it
+    # uncapped on ~39GiB of KV, and FP8 here leaves ~46GiB, so the full window
+    # is probably reachable. Starting at half anyway: the runbook's rule is to
+    # set this explicitly and raise it after reading the "GPU KV cache size"
+    # line from the startup logs. 131072 also matches gpt-oss-120b on this node.
+    max-model-len: 131072
+    max-num-seqs: 8
+    max-num-batched-tokens: 8192
