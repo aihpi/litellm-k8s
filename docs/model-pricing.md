@@ -42,7 +42,6 @@ USD per 1M tokens. `n` = number of serverless providers surveyed.
 
 | Our model | Reference model priced | In | Out | n | Basis |
 | --- | --- | --: | --: | --: | --- |
-| `llama-3b` | meta-llama/Llama-3.2-3B-Instruct | 0.05 | 0.33 | 2 | median |
 | `llama-3-3-70b` | meta-llama/Llama-3.3-70B-Instruct | 0.293 | 0.72 | 13 | median (in 0.10–1.04, out 0.32–2.25) |
 | `gemma-4-31b` | google/gemma-4-31b-it | 0.14 | 0.40 | 18 | median (in 0.09–0.99, out 0.34–1.49) |
 | `gpt-oss-120b` | openai/gpt-oss-120b | 0.14 | 0.60 | 19 | median (in 0.03–0.35, out 0.17–0.95) |

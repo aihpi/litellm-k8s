@@ -8,14 +8,41 @@ resources:
   - ../../models
   - ingress.yaml
   - sealed-secrets/litellm-secret.yaml
+  # OpenTela head node for Slurm-hosted workers. Prod-only (lives here, not in
+  # base): staging has no models and no worker tunnel to point at it.
+  - otela-head/deployment.yaml
+  - otela-head/service.yaml
+  - otela-head/nginx-otela-template.yaml
+  # The tunnel passcode. nginx and the sidecar both reference this Secret and
+  # will not start without it. Rotate by re-sealing (docs/opentela-slurm.md).
+  - sealed-secrets/otela-tunnel.yaml
 
 patches:
   - path: patches/litellm-prod.yaml
   - path: patches/nginx-prod-service.yaml
   - path: patches/litellm-prod-authentik-sso.yaml
+  # wstunnel sidecar + its Service port, for the OpenTela worker tunnel.
+  - path: patches/litellm-otela-tunnel.yaml
+  - path: patches/litellm-service-tunnel-port.yaml
+  - path: patches/nginx-otela-tunnel.yaml
+  # Pins prod's postgres-pvc to the PV it was rebound to out of band; staging
+  # and dev bind elsewhere, so this cannot live in base.
   - path: patches/postgres-prod-pvc.yaml
 
 replicas:
   - name: litellm-proxy
     count: 2
+  # Parked to free GPUs (live cluster had these at 0 since 2026-08-20; every
+  # `kubectl apply -k overlays/prod` was scaling them back to 1 and leaving the
+  # pods Pending). To unpark: set count back to 1 and apply.
+  - name: granite-4-h-tiny
+    count: 0
+  - name: qwen-3-5-9b
+    count: 0
+  - name: qwen-image-edit
+    count: 0
+  - name: qwen3-omni
+    count: 0
+  - name: qwen3-vl-32b
+    count: 0
 

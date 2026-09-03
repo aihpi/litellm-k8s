@@ -10,6 +10,6 @@
 ```bash
 curl -H "Authorization: Bearer YOUR_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"model": "llama-3b", "messages": [{"role": "user", "content": "Hello"}]}' \
+  -d '{"model": "gemma-4-31b", "messages": [{"role": "user", "content": "Hello"}]}' \
   http://GATEWAY_HOST/v1/chat/completions
 ```

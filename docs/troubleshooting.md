@@ -8,7 +8,7 @@
 
 ## Model pod not ready
 
-- Check GPU resources: kubectl describe pod -n litellm -l app=llama-3b
+- Check GPU resources: kubectl describe pod -n litellm -l app=gemma-4-31b
 - Ensure the node has available GPUs
 - Verify image pull and model download logs
 

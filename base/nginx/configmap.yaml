@@ -32,6 +32,14 @@ data:
         location = /metrics { return 403; }
         location ^~ /metrics/ { return 403; }
 
+        # OpenTela worker tunnel (prod only). The location's path prefix is the
+        # tunnel passcode, so it is NOT written here: the nginx image's envsubst
+        # renders overlays/prod/otela-head/nginx-otela-template.yaml into
+        # conf.d at startup with TUNNEL_TOKEN from the sealed otela-tunnel
+        # Secret. A glob, not a literal path, so nginx still starts anywhere the
+        # template isn't mounted (staging overrides this file anyway).
+        include /etc/nginx/conf.d/otela-*.conf;
+
         if ($request_method = HEAD) {
             return 200;
         }
