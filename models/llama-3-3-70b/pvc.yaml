@@ -3,6 +3,7 @@ kind: PersistentVolumeClaim
 metadata:
   name: llama-3-3-70b-cache
 spec:
+  volumeName: new-llama-3-3-70b-cache
   accessModes:
     - ReadWriteOnce
   storageClassName: nfs-k8s-general

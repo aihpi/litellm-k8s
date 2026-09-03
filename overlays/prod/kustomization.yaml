@@ -13,6 +13,7 @@ patches:
   - path: patches/litellm-prod.yaml
   - path: patches/nginx-prod-service.yaml
   - path: patches/litellm-prod-authentik-sso.yaml
+  - path: patches/postgres-prod-pvc.yaml
 
 replicas:
   - name: litellm-proxy
