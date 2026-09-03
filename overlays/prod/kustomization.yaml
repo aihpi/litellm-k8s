@@ -13,9 +13,9 @@ resources:
   - otela-head/deployment.yaml
   - otela-head/service.yaml
   - otela-head/nginx-otela-template.yaml
-  # Uncomment once sealed — see docs/opentela-slurm.md step 1. The sidecar and
-  # nginx both reference this Secret and will not start without it.
-  # - sealed-secrets/otela-tunnel.yaml
+  # The tunnel passcode. nginx and the sidecar both reference this Secret and
+  # will not start without it. Rotate by re-sealing (docs/opentela-slurm.md).
+  - sealed-secrets/otela-tunnel.yaml
 
 patches:
   - path: patches/litellm-prod.yaml

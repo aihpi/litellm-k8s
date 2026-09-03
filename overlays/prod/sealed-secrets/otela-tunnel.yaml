@@ -1,0 +1,13 @@
+---
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: otela-tunnel
+  namespace: litellm
+spec:
+  encryptedData:
+    token: AgCWpo8jocQxLo2LnbroUOgjQKORyPKpgUHisX7afrDipaN/J187KjYZKPHlI/YDVMFMA4upVhKjtxUhsFTJcG0cE/FyL35xQY3DTmrU5VoYbGzvkyuN9WFKmYwEYh8OY954sGWSE1Z7GTVGCJVbxPVOs0dsv5Ud1j9O1i7ktsGDfnAXSHdZTzDRFK8F+3IBzFbjMQjWXxWbh23gJT0+UGZEaEEE5ht1nwV9Fog1Pq83AQRJxDtaGsxsQHhBjRaQBFAKakKRoFe4MelCxKqLYxfyKT1n5Lxbiu4+ch3TgCeo+SrawHwcr70OKgKAvCPwNhN7FoSJMxVf2srHMLxi6Nup58SIu1C084Fq2VyxveZv+t7mMsCxLF8u9JGEACjOMAJGi53H1YdmbD+EMIoN9fOJOA8p5FHHidGrD+tn9C1FhpfeuBNLRh7GCALIwWMZ2f0Dvvz9Ks0H25z7C/plujHZKEtu0hpS+v8w4l0YWOSuZVLQQjjcHYQlQB3b2UKuxnjDkXT3RdlN92u0dUP2wgQRsyJAyAa7DC2SeDr/JXdf5Srq/J69nwJKfb4wRqpwZRDv/r/StCXHjct/6iZCjTPC0uBhJJnJR/nq/Vkgo2CX4YWbPnY4kwwpRfbHmH3L0Iu4nKEPhwnUGQvYrZpI2c3ti+zticvH2TsgdIamS5KJfvNpk6zcAV9qk5KZI6eabsmkrtBKOhqe1bM+8L81OGNBwV7tNcuHBYaEn/HlGLTkVA==
+  template:
+    metadata:
+      name: otela-tunnel
+      namespace: litellm
