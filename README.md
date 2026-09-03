@@ -69,7 +69,7 @@ See docs/adding-models.md
 
 - Logs: kubectl logs -n litellm deployment/litellm-proxy -f
 - Restart: kubectl rollout restart -n litellm deployment/litellm-proxy
-- Scale: kubectl scale -n litellm deployment/llama-3b --replicas=2
+- Scale: kubectl scale -n litellm deployment/gemma-4-31b --replicas=2
 
 ## Handoff / Recent Changes
 
@@ -100,7 +100,7 @@ kubectl port-forward -n litellm service/litellm-service 4000:4000
 ```bash
 curl -sS -H "Authorization: Bearer $LITELLM_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"model":"llama-3b","messages":[{"role":"user","content":"Hello"}]}' \
+  -d '{"model":"gemma-4-31b","messages":[{"role":"user","content":"Hello"}]}' \
   http://localhost:4000/v1/chat/completions
 ```
 

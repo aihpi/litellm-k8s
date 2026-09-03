@@ -12,11 +12,6 @@ data:
       store_model_in_db: true
 
     model_list:
-      - model_name: llama-3b
-        litellm_params:
-          model: openai/llama-3b
-          api_base: http://llama-3b-service:8000/v1
-          api_key: dummy
       - model_name: qwen-image-edit
         litellm_params:
           model: aihpi-provider/qwen-image-edit

@@ -8,14 +8,13 @@ Per-token costs for every model below are in [Model Pricing](model-pricing.md); 
 
 | | config.yaml + DB | DB only |
 | --- | --- | --- |
-| Models | `llama-3b`, `llama-3-3-70b`, `gemma-4-31b`, `gpt-oss-120b`, `qwen-3-5-9b`, `octen-embedding-8b`, `qwen-image-edit` | `granite-4-h-tiny`, `ministral-3-14b`, `qwen3-omni`, `qwen3-vl-32b`, `qwen3-vl-embedding-8b`, `minilm-embedding` |
+| Models | `llama-3-3-70b`, `gemma-4-31b`, `gpt-oss-120b`, `qwen-3-5-9b`, `octen-embedding-8b`, `qwen-image-edit` | `granite-4-h-tiny`, `ministral-3-14b`, `qwen3-omni`, `qwen3-vl-32b`, `qwen3-vl-embedding-8b`, `minilm-embedding` |
 | Costs set in | both, kept identical | [model-catalog.json](../scripts/model-catalog.json) |
 
 Not registered with LiteLLM: `dinov3-embeddings-api` — deployed and serving, but its usage is entirely unlogged.
 
 | Model | Service | Notes |
 | --- | --- | --- |
-| llama-3b | llama-3b-service | General instruction model (in `config.yaml` model_list; manifests applied out-of-band) |
 | llama-3-3-70b | llama-3-3-70b-service | Llama 3.3 70B FP8, 32K context, single H100 |
 | gemma-4-31b | gemma-4-31b-service | Gemma 4 31B instruct |
 | gpt-oss-120b | gpt-oss-120b-service | GPT-OSS 120B (`openai/gpt-oss-120b`, native MXFP4), 128K context, KV-cache CPU offload tier; LoRA disabled (MoE+LoRA bug, see deployment.yaml) |
