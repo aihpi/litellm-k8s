@@ -6,9 +6,9 @@ metadata:
     app: otela-head
 spec:
   replicas: 1
-  # Recreate, never RollingUpdate: --seed 0 gives a deterministic libp2p peer
-  # ID, so a surge pod would be a SECOND head with the SAME identity and the
-  # workers' bootstrap address would flap between them.
+  # Recreate, never RollingUpdate: the fixed --seed gives a deterministic
+  # libp2p peer ID, so a surge pod would be a SECOND head with the SAME
+  # identity and the workers' bootstrap address would flap between them.
   strategy:
     type: Recreate
   selector:
@@ -55,9 +55,21 @@ spec:
           # 127.0.0.1:43905 on the worker — so 127.0.0.1 is not a placeholder
           # here, it is the one address that is correct from every worker.
           #
-          # --seed 0 makes the peer ID deterministic, which is what lets this
-          # be a stateless Deployment: the identity in ~/.ocfcore/keys/id is
-          # regenerated identically on every start. Read the ID from the log.
+          # --seed must be NON-zero for a stateless Deployment. In OpenTela
+          # (src/internal/protocol/host.go newHost, key.go) seed 0 means "load
+          # ~/.config/opentela/keys/id, else generate a RANDOM key" — with an
+          # emptyDir that is a new peer ID on every pod restart, and every
+          # worker sbatch pins that ID. A non-zero seed feeds math/rand into the
+          # RSA keygen, so the same seed yields the same key on every start.
+          # Corollary: anyone who knows the seed can derive the private key.
+          # Acceptable here because the head is reachable only through the
+          # token-gated tunnel (upstream's PSK network isolation is commented
+          # out, so the token is the one gate either way). Get the ID with
+          # `otela peer-id` inside this container (docs/opentela-slurm.md).
+          #
+          # --mode standalone is ALSO what keeps the head off eth-easl's public
+          # mesh: it is the only mode with an empty bootstrap list. Workers
+          # need --bootstrap.static= for the same effect (see the runbook).
           command: ["/opt/otela/otela"]
           args:
             - start
@@ -66,7 +78,7 @@ spec:
             - --public-addr
             - "127.0.0.1"
             - --seed
-            - "0"
+            - "43905"
           ports:
             - name: http
               containerPort: 8092
