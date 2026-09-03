@@ -3,6 +3,7 @@ kind: PersistentVolumeClaim
 metadata:
   name: gpt-oss-120b-cache
 spec:
+  volumeName: new-gpt-oss-120b-cache
   accessModes:
     - ReadWriteOnce
   storageClassName: nfs-k8s-general

@@ -3,6 +3,7 @@ kind: PersistentVolumeClaim
 metadata:
   name: granite-4-h-tiny-cache
 spec:
+  volumeName: new-granite-4-h-tiny-cache
   accessModes:
     - ReadWriteOnce
   storageClassName: nfs-k8s-general

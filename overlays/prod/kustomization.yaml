@@ -25,6 +25,9 @@ patches:
   - path: patches/litellm-otela-tunnel.yaml
   - path: patches/litellm-service-tunnel-port.yaml
   - path: patches/nginx-otela-tunnel.yaml
+  # Pins prod's postgres-pvc to the PV it was rebound to out of band; staging
+  # and dev bind elsewhere, so this cannot live in base.
+  - path: patches/postgres-prod-pvc.yaml
 
 replicas:
   - name: litellm-proxy

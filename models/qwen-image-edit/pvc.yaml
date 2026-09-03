@@ -4,6 +4,7 @@ metadata:
   name: qwen-model-storage
   namespace: litellm
 spec:
+  volumeName: new-qwen-model-storage
   accessModes:
     - ReadWriteOnce
   storageClassName: nfs-k8s-general

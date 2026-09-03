@@ -1,0 +1,9 @@
+# Pin to the PV prod's postgres-pvc was rebound to out of band. Without this,
+# every apply tries to clear volumeName and fails (spec is immutable once bound).
+# Prod-only: staging and dev's postgres-pvc are bound to different PVs.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+spec:
+  volumeName: new-postgres-pvc-litellm
