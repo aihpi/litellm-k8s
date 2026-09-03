@@ -17,4 +17,17 @@ patches:
 replicas:
   - name: litellm-proxy
     count: 2
+  # Parked to free GPUs (live cluster had these at 0 since 2026-08-20; every
+  # `kubectl apply -k overlays/prod` was scaling them back to 1 and leaving the
+  # pods Pending). To unpark: set count back to 1 and apply.
+  - name: granite-4-h-tiny
+    count: 0
+  - name: qwen-3-5-9b
+    count: 0
+  - name: qwen-image-edit
+    count: 0
+  - name: qwen3-omni
+    count: 0
+  - name: qwen3-vl-32b
+    count: 0
 
