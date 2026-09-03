@@ -6,7 +6,6 @@ namespace: litellm
 resources:
   - ../../base
   - ../../models
-  - ingress.yaml
   - sealed-secrets/litellm-secret.yaml
   # OpenTela head node for Slurm-hosted workers. Prod-only (lives here, not in
   # base): staging has no models and no worker tunnel to point at it.
