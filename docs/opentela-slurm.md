@@ -64,15 +64,28 @@ kubectl -n litellm rollout restart deploy/litellm-proxy   # picks up the sidecar
 kubectl -n litellm rollout restart deploy/nginx-proxy     # renders the template, subPath ConfigMap needs it anyway
 ```
 
-The head's peer ID is deterministic (`--seed 0`) and is logged on start:
+The head's peer ID is deterministic (`--seed 0`). It is **not** in the log —
+the head only emits GIN access lines for the readiness probe — so ask the
+binary inside the running container, where it reads the key the head
+actually generated (`~/.ocfcore/keys/id`):
 
 ```bash
-kubectl -n litellm logs deploy/otela-head -c otela | grep -iE "peer|listen"
+kubectl -n litellm exec deploy/otela-head -c otela -- /opt/otela/otela peer-id
 ```
 
-Read it from *this* container only. `otela peer-id` run anywhere else (a
-different pod, your laptop) generates a fresh key and prints an ID the head
-does not have.
+Expect a `Qm…` string (OpenTela uses RSA keys, so IDs are CIDv0 `Qm…`, not
+the Ed25519 `12D3KooW…` form). Cross-check: the head lists itself under the
+same ID in its own table, with `public_address: 127.0.0.1` and
+`public_port: 43905`:
+
+```bash
+kubectl -n litellm run curl-$RANDOM --rm -i --restart=Never --image=curlimages/curl:8.10.1 -- -s http://otela-head.litellm.svc:8092/v1/dnt/table
+```
+
+Run `peer-id` in *this* container only. Anywhere else (a different pod, your
+laptop) it generates a fresh key and prints an ID the head does not have.
+The ID is the hash of a public key and is safe to paste around; the tunnel
+token is what gates access, not the ID.
 
 ## 3. Check routing from anywhere on the internet
 
