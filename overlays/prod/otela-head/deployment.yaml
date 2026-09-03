@@ -38,7 +38,14 @@ spec:
               mountPath: /opt/otela
       containers:
         - name: otela
-          image: alpine:3.20
+          # glibc base, NOT alpine: the v0.2.4 release binary is dynamically
+          # linked against glibc (it embeds sqlite), so on musl the kernel fails
+          # to find /lib64/ld-linux-x86-64.so.2 and exec reports
+          # "no such file or directory" for a file that is plainly there.
+          # Measured 2026-08-20: exit 255 in a crash loop on alpine:3.20.
+          # debian-slim has no ca-certificates; add them if otela ever needs
+          # outbound HTTPS (the head only listens, so far it hasn't).
+          image: debian:12-slim
           # --mode standalone is the documented head-node mode. Ports are the
           # defaults (HTTP 8092, libp2p TCP 43905) so the Service and the
           # tunnel's --restrict-to can rely on them.
