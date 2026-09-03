@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: otela-head
+  labels:
+    app: otela-head
+spec:
+  type: ClusterIP
+  selector:
+    app: otela-head
+  ports:
+    # HTTP API: /v1/dnt/table for registration, /v1/service/<name>/... is the
+    # proxy LiteLLM points at.
+    - name: http
+      port: 8092
+      targetPort: 8092
+    # libp2p bootstrap. Only ever reached via the wstunnel sidecar in the
+    # litellm-proxy pod, whose --restrict-to is pinned to this host:port. No
+    # LoadBalancer on purpose — workers come in through the tunnel, not the LB.
+    - name: p2p
+      port: 43905
+      targetPort: 43905

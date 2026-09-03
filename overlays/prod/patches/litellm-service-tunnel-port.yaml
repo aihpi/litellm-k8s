@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: litellm-service
+spec:
+  ports:
+    # wstunnel sidecar in the litellm-proxy pod. nginx-proxy routes the
+    # secret tunnel path here so Slurm workers can reach the OpenTela head
+    # node through the public LiteLLM host. Prod-only: staging has no models
+    # and no head node, so it gets neither the sidecar nor this port.
+    - name: otela-tunnel
+      port: 8085
+      targetPort: 8085

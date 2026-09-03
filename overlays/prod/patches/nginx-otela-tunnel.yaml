@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-proxy
+spec:
+  template:
+    spec:
+      containers:
+        - name: nginx
+          env:
+            - name: TUNNEL_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: otela-tunnel
+                  key: token
+            # Only substitute this one variable when rendering templates.
+            # Without the filter envsubst would also blank any $NAME in the
+            # template that happens to exist in the container env.
+            - name: NGINX_ENVSUBST_FILTER
+              value: "^TUNNEL_TOKEN$"
+          volumeMounts:
+            - name: nginx-otela-template
+              mountPath: /etc/nginx/templates
+              readOnly: true
+      volumes:
+        - name: nginx-otela-template
+          configMap:
+            name: nginx-otela-template
