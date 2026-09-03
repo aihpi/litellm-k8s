@@ -21,13 +21,20 @@ spec:
         # sits behind the same public host and TLS as the API.
         - name: otela-tunnel
           image: ghcr.io/erebe/wstunnel:v10.7.1
+          env:
+            - name: TUNNEL_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: otela-tunnel
+                  key: token
           args:
             - server
             - ws://0.0.0.0:8085
             - --restrict-to=otela-head.litellm.svc.cluster.local:43905
-            # The path prefix is the passcode. Same value as the nginx location
-            # in base/nginx/configmap.yaml and the worker sbatch script.
-            - --restrict-http-upgrade-path-prefix=otela-4f1c48a2bfa7f8c973952b60356f72e7
+            # The path prefix is the passcode, from the sealed otela-tunnel
+            # Secret — the same value nginx renders into its location. $(VAR)
+            # is Kubernetes' own expansion; the container never sees a literal.
+            - --restrict-http-upgrade-path-prefix=otela-$(TUNNEL_TOKEN)
           ports:
             - name: tunnel
               containerPort: 8085

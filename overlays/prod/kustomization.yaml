@@ -12,6 +12,10 @@ resources:
   # base): staging has no models and no worker tunnel to point at it.
   - otela-head/deployment.yaml
   - otela-head/service.yaml
+  - otela-head/nginx-otela-template.yaml
+  # Uncomment once sealed — see docs/opentela-slurm.md step 1. The sidecar and
+  # nginx both reference this Secret and will not start without it.
+  # - sealed-secrets/otela-tunnel.yaml
 
 patches:
   - path: patches/litellm-prod.yaml
@@ -20,6 +24,7 @@ patches:
   # wstunnel sidecar + its Service port, for the OpenTela worker tunnel.
   - path: patches/litellm-otela-tunnel.yaml
   - path: patches/litellm-service-tunnel-port.yaml
+  - path: patches/nginx-otela-tunnel.yaml
 
 replicas:
   - name: litellm-proxy

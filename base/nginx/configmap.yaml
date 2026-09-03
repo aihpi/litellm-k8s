@@ -32,32 +32,13 @@ data:
         location = /metrics { return 403; }
         location ^~ /metrics/ { return 403; }
 
-        # OpenTela worker tunnel. Slurm jobs open a WebSocket to this secret
-        # path; the wstunnel sidecar in the litellm-proxy pod then forwards raw
-        # TCP to otela-head:43905 and nothing else (--restrict-to). The path
-        # prefix IS the passcode. It lives in plaintext here and in the sidecar
-        # args and it appears in access logs, so treat it as obscurity bounded
-        # by --restrict-to, not as a credential. Rotate it in three places:
-        # this block, the sidecar --restrict-http-upgrade-path-prefix, and the
-        # worker sbatch script (docs/opentela-slurm.md).
-        location /otela-4f1c48a2bfa7f8c973952b60356f72e7/ {
-          proxy_pass http://litellm-service.litellm.svc.cluster.local:8085;
-
-          proxy_http_version 1.1;
-          proxy_set_header Host              $host;
-          proxy_set_header Upgrade           $http_upgrade;
-          proxy_set_header Connection        $connection_upgrade;
-          proxy_set_header X-Real-IP         $remote_addr;
-          proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-          proxy_set_header X-Forwarded-Proto $scheme;
-
-          # One tunnel session is a single long-lived WebSocket. The 300s used
-          # for LLM streaming below would cut it mid-job.
-          proxy_read_timeout  3600s;
-          proxy_send_timeout  3600s;
-          proxy_buffering     off;
-          proxy_redirect      off;
-        }
+        # OpenTela worker tunnel (prod only). The location's path prefix is the
+        # tunnel passcode, so it is NOT written here: the nginx image's envsubst
+        # renders overlays/prod/otela-head/nginx-otela-template.yaml into
+        # conf.d at startup with TUNNEL_TOKEN from the sealed otela-tunnel
+        # Secret. A glob, not a literal path, so nginx still starts anywhere the
+        # template isn't mounted (staging overrides this file anyway).
+        include /etc/nginx/conf.d/otela-*.conf;
 
         if ($request_method = HEAD) {
             return 200;
