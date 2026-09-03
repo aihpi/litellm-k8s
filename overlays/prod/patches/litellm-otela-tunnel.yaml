@@ -27,7 +27,13 @@ spec:
                 secretKeyRef:
                   name: otela-tunnel
                   key: token
+          # The image's ENTRYPOINT is dumb-init and the wstunnel invocation
+          # lives in CMD, which `args:` replaces wholesale. So the binary path
+          # must be the first arg — without it dumb-init execs a program
+          # literally called "server" and the sidecar crash-loops (exit 1,
+          # observed 2026-08-20). Do not set `command:`; dumb-init stays PID 1.
           args:
+            - /home/app/wstunnel
             - server
             - ws://0.0.0.0:8085
             - --restrict-to=otela-head.litellm.svc.cluster.local:43905
