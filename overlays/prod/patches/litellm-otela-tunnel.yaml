@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: litellm-proxy
+spec:
+  template:
+    metadata:
+      annotations:
+        # kustomize's strategic merge puts the new container FIRST in the list,
+        # and `kubectl logs/exec deploy/litellm-proxy` without -c targets the
+        # first container. Without this every runbook command that omits -c
+        # would silently land in wstunnel instead of LiteLLM.
+        kubectl.kubernetes.io/default-container: litellm
+    spec:
+      containers:
+        # WebSocket tunnel entry point for Slurm workers joining the OpenTela
+        # head node. nginx-proxy routes the secret path to port 8085 here; the
+        # sidecar upgrades it to a raw TCP stream and forwards ONLY to the head
+        # node's libp2p port (--restrict-to) — nothing else in the cluster is
+        # reachable through it. It rides in the litellm-proxy pod purely so it
+        # sits behind the same public host and TLS as the API.
+        - name: otela-tunnel
+          image: ghcr.io/erebe/wstunnel:v10.7.1
+          args:
+            - server
+            - ws://0.0.0.0:8085
+            - --restrict-to=otela-head.litellm.svc.cluster.local:43905
+            # The path prefix is the passcode. Same value as the nginx location
+            # in base/nginx/configmap.yaml and the worker sbatch script.
+            - --restrict-http-upgrade-path-prefix=otela-4f1c48a2bfa7f8c973952b60356f72e7
+          ports:
+            - name: tunnel
+              containerPort: 8085
+          # Liveness only. A readinessProbe on a sidecar gates the WHOLE pod,
+          # so a down tunnel would pull a healthy LiteLLM out of the Service.
+          # The tunnel is auxiliary to the API, not the other way round.
+          livenessProbe:
+            tcpSocket:
+              port: tunnel
+            initialDelaySeconds: 5
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 20m
+              memory: 32Mi
+            limits:
+              cpu: 500m
+              memory: 128Mi

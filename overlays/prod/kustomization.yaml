@@ -8,11 +8,18 @@ resources:
   - ../../models
   - ingress.yaml
   - sealed-secrets/litellm-secret.yaml
+  # OpenTela head node for Slurm-hosted workers. Prod-only (lives here, not in
+  # base): staging has no models and no worker tunnel to point at it.
+  - otela-head/deployment.yaml
+  - otela-head/service.yaml
 
 patches:
   - path: patches/litellm-prod.yaml
   - path: patches/nginx-prod-service.yaml
   - path: patches/litellm-prod-authentik-sso.yaml
+  # wstunnel sidecar + its Service port, for the OpenTela worker tunnel.
+  - path: patches/litellm-otela-tunnel.yaml
+  - path: patches/litellm-service-tunnel-port.yaml
 
 replicas:
   - name: litellm-proxy

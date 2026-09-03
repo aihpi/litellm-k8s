@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otela-head
+  labels:
+    app: otela-head
+spec:
+  replicas: 1
+  # Recreate, never RollingUpdate: --seed 0 gives a deterministic libp2p peer
+  # ID, so a surge pod would be a SECOND head with the SAME identity and the
+  # workers' bootstrap address would flap between them.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: otela-head
+  template:
+    metadata:
+      labels:
+        app: otela-head
+    spec:
+      # OpenTela publishes no container image (only a local-demo Dockerfile), so
+      # for this test the pinned release binary is fetched into an emptyDir at
+      # pod start. ponytail: pull-on-start needs egress and re-downloads 71MiB
+      # per restart; bake ghcr.io/aihpi/otela-head via a build workflow (same
+      # shape as build-lora-manager.yml) once this graduates from a test.
+      initContainers:
+        - name: fetch-otela
+          image: curlimages/curl:8.10.1
+          command: ["sh", "-c"]
+          args:
+            - >-
+              curl -fsSL -o /opt/otela/otela
+              https://github.com/eth-easl/opentela/releases/download/v0.2.4/opentela-amd64
+              && chmod +x /opt/otela/otela
+          volumeMounts:
+            - name: otela-bin
+              mountPath: /opt/otela
+      containers:
+        - name: otela
+          image: alpine:3.20
+          # --mode standalone is the documented head-node mode. Ports are the
+          # defaults (HTTP 8092, libp2p TCP 43905) so the Service and the
+          # tunnel's --restrict-to can rely on them.
+          #
+          # --public-addr is what the head advertises to peers. Workers only
+          # ever reach this pod through their own wstunnel, which binds
+          # 127.0.0.1:43905 on the worker — so 127.0.0.1 is not a placeholder
+          # here, it is the one address that is correct from every worker.
+          #
+          # --seed 0 makes the peer ID deterministic, which is what lets this
+          # be a stateless Deployment: the identity in ~/.ocfcore/keys/id is
+          # regenerated identically on every start. Read the ID from the log.
+          command: ["/opt/otela/otela"]
+          args:
+            - start
+            - --mode
+            - standalone
+            - --public-addr
+            - "127.0.0.1"
+            - --seed
+            - "0"
+          ports:
+            - name: http
+              containerPort: 8092
+            - name: p2p
+              containerPort: 43905
+          volumeMounts:
+            - name: otela-bin
+              mountPath: /opt/otela
+              readOnly: true
+          readinessProbe:
+            httpGet:
+              path: /v1/dnt/table
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /v1/dnt/table
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+      volumes:
+        - name: otela-bin
+          emptyDir: {}
