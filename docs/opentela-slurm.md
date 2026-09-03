@@ -64,10 +64,12 @@ kubectl -n litellm rollout restart deploy/litellm-proxy   # picks up the sidecar
 kubectl -n litellm rollout restart deploy/nginx-proxy     # renders the template, subPath ConfigMap needs it anyway
 ```
 
-The head's peer ID is deterministic (`--seed 0`). It is **not** in the log —
-the head only emits GIN access lines for the readiness probe — so ask the
-binary inside the running container, where it reads the key the head
-actually generated (`~/.ocfcore/keys/id`):
+The head's peer ID is deterministic because the Deployment passes a fixed
+**non-zero** `--seed` (seed `0` would mean a *random* key on every pod
+restart — see the comment in `otela-head/deployment.yaml`). It is **not** in
+the log — the head only emits GIN access lines for the readiness probe — so
+ask the binary inside the running container, where it reads the key the head
+actually generated (`~/.config/opentela/keys/id`):
 
 ```bash
 kubectl -n litellm exec deploy/otela-head -c otela -- /opt/otela/otela peer-id
@@ -116,31 +118,53 @@ If compute nodes have no internet, also pre-download the model into
 
 ## 5. Worker job
 
+Compute nodes are shared, so nothing may bind a fixed port and nothing may
+share state through `$HOME`. Everything per-job is derived from
+`$SLURM_JOB_ID`. `vllm` is expected on `PATH` (a `uv venv` works; unset
+`PYTHONPATH` if your shell exports one, it shadows the venv's packages).
+
 ```bash
 #!/bin/bash
-#SBATCH --gres=gpu:1 --time=02:00:00 --cpus-per-task=8 --mem=48G
-module load cuda
+#SBATCH --account=<account> --partition=<partition>
+#SBATCH --gres=gpu:1 --time=02:00:00 --cpus-per-task=8 --mem=48G --job-name=otela-worker
+export PATH="$HOME/vllm-venv/bin:$PATH"
+unset PYTHONPATH
 export HF_HOME=/scratch/$USER/hf
 TOKEN=$(cat ~/otela-tunnel-token)
+PORT=$((20000 + SLURM_JOB_ID % 10000))          # vLLM; shared node, 8080 may be taken
+TUN=$((30000 + SLURM_JOB_ID % 10000))           # local end of the tunnel, same reason
 
-# Local 43905 -> LiteLLM host over WSS -> sidecar -> otela-head:43905.
+# Local $TUN -> LiteLLM host over WSS -> sidecar -> otela-head:43905.
 # The destination hostname is resolved by the wstunnel SERVER inside the
 # cluster, which is why a cluster-internal DNS name works from a Slurm node.
 ~/bin/wstunnel client \
-  -L tcp://127.0.0.1:43905:otela-head.litellm.svc.cluster.local:43905 \
+  -L tcp://127.0.0.1:$TUN:otela-head.litellm.svc.cluster.local:43905 \
   --http-upgrade-path-prefix "otela-$TOKEN" \
   wss://api.aisc.hpi.de:443 &
 sleep 3
 
+# --bootstrap.static=  : REQUIRED. --bootstrap.addr is APPENDED to the built-in
+#   static list (three public eth-easl bootstrap servers), it does not replace
+#   it. Without this the worker joins their public mesh and gossips strangers'
+#   nodes into our head's table — and /v1/service/llm then load-balances our
+#   prompts onto them. Observed 2026-09-03.
+# --config-dir        : the identity key is written under this dir. The
+#   default is $HOME/.config/opentela, shared by every job on networked home,
+#   and an existing key file wins over --seed — so all jobs would be one peer.
+# --seed $SLURM_JOB_ID: non-zero = deterministic per job; 0 = random.
 ~/bin/otela start \
-  --bootstrap.addr /ip4/127.0.0.1/tcp/43905/p2p/<PEER_ID> \
-  --subprocess "vllm serve Qwen/Qwen3-0.6B --port 8080" \
-  --service.name llm --service.port 8080 \
-  --seed 1
+  --bootstrap.static= \
+  --bootstrap.addr /ip4/127.0.0.1/tcp/$TUN/p2p/<PEER_ID> \
+  --config-dir /tmp/otela-$SLURM_JOB_ID \
+  --subprocess "vllm serve Qwen/Qwen3-0.6B --port $PORT" \
+  --service.name llm --service.port $PORT \
+  --seed $SLURM_JOB_ID
 ```
 
-In the job's stdout you want wstunnel report a connection, otela report the
-bootstrap peer as connected, then vLLM come up.
+In the job's stdout you want wstunnel report a connection, otela report
+`bootstrap_connected=true`, a relay reservation on the head's ID (first 12
+chars), then vLLM come up. A relay reservation on any *other* ID means the
+bootstrap list was not emptied.
 
 ## 6. Verify registration from inside the cluster
 
@@ -150,7 +174,16 @@ kubectl -n litellm run curl --rm -it --restart=Never --image=curlimages/curl:8.1
 ```
 
 A second node advertising service `llm` with `model=Qwen/Qwen3-0.6B` means the
-whole chain works.
+whole chain works. The table must contain **only** the head and your workers.
+Any node you did not start (check `hardware.gpus`, `identity_group`,
+`build_attestation.version`) means a worker ran without `--bootstrap.static=`
+and pulled eth-easl's public mesh in. Do not register anything in LiteLLM
+until it is clean: fix the worker, then restart the head to flush the table
+(`cleanslate` defaults to true, and with the fixed seed the ID survives):
+
+```bash
+kubectl -n litellm rollout restart deploy/otela-head
+```
 
 ## 7. Register with LiteLLM
 
@@ -182,6 +215,12 @@ Then call `slurm-test` with a normal LiteLLM key.
   the tunnel.
 - Tunnel connects but otela never registers → wrong `<PEER_ID>`, or the head is
   not listening on 43905 (`kubectl logs` for `Listen Addr`).
+- Strangers' nodes in the table → a worker without `--bootstrap.static=` (step 6).
+- `<PEER_ID>` changed after a head restart → someone put `--seed 0` back.
+- Two jobs, one peer ID → a worker without `--config-dir`, or with a fixed seed.
+- `Exec format error` on the compute node → different CPU arch than the login
+  node (the Grace nodes are aarch64; the release binary and the venv are
+  x86-64). Exclude them or use `--constraint`.
 - Registered but LiteLLM errors → the `hosted_vllm/...` model string does not
   match what the worker's vLLM reports in `/v1/models`.
 
