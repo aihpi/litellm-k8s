@@ -45,3 +45,6 @@ replicas:
   - name: qwen3-vl-32b
     count: 0
 
+images:
+  - name: ghcr.io/aihpi/tool-litellm
+    digest: sha256:d4dc9949ec5a2623a98ecdf7af3414264d59a948ec0df9e3264d03bee4a6e330
