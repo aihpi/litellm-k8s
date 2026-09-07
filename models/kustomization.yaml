@@ -44,3 +44,7 @@ resources:
   - qwen3-8-27b/pvc.yaml
   - qwen3-8-27b/deployment.yaml
   - qwen3-8-27b/service.yaml
+  - qwen3-reranker-4b/configmap.yaml
+  - qwen3-reranker-4b/pvc.yaml
+  - qwen3-reranker-4b/deployment.yaml
+  - qwen3-reranker-4b/service.yaml

@@ -150,6 +150,17 @@
         "input_cost_per_token": 4.0e-7,
         "output_cost_per_token": 3.0e-6
       }
+    },
+    {
+      "model_name": "qwen3-reranker-4b",
+      "litellm_params": {
+        "model": "hosted_vllm/qwen3-reranker-4b",
+        "api_base": "http://qwen3-reranker-4b-service:8000/v1",
+        "api_key": "dummy",
+        "input_cost_per_token": 2.5e-8,
+        "output_cost_per_token": 0.0
+      },
+      "model_info": { "mode": "rerank" }
     }
   ]
 }

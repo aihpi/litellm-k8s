@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: qwen3-reranker-4b-cache
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: nfs-k8s-general
+  resources:
+    requests:
+      # BF16 checkpoint is ~8 GB plus tokenizer; 20Gi leaves room for a
+      # second revision in the HF cache.
+      storage: 20Gi

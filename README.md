@@ -119,6 +119,17 @@ Or run:
 LITELLM_API_KEY=sk-... python3 scripts/test_octen_embedding.py
 ```
 
+### Rerank (qwen3-reranker-4b)
+
+Cohere-style request; `documents` are scored against `query` and returned sorted by `relevance_score`.
+
+```bash
+curl -sS -H "Authorization: Bearer $LITELLM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"qwen3-reranker-4b","query":"Wie beantrage ich einen Personalausweis?","documents":["Der Personalausweis wird im Buergeramt beantragt.","Die Bibliothek oeffnet um 9 Uhr."],"top_n":2}' \
+  http://localhost:4000/v1/rerank
+```
+
 ### Image edits (qwen-image-edit)
 
 ```bash

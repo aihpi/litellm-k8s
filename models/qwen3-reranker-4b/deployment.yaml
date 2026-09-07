@@ -1,0 +1,128 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qwen3-reranker-4b
+  labels:
+    app: qwen3-reranker-4b
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: qwen3-reranker-4b
+  template:
+    metadata:
+      labels:
+        app: qwen3-reranker-4b
+    spec:
+      # Same placement as the other pooling models (octen-embedding-8b,
+      # qwen3-vl-embedding-8b): any A30 node, nvidia runtime class as all
+      # a30 deployments set it. On 2026-09-07 gx16 had 4 free A30s and gx18
+      # had 1; the scheduler picks.
+      runtimeClassName: nvidia
+      nodeSelector:
+        accelerator: a30
+      containers:
+        - name: vllm
+          # vLLM 0.14.1. This is the digest vllm/vllm-openai:latest-cu130
+          # resolves to on gx16, i.e. the exact image serving
+          # octen-embedding-8b and qwen3-vl-embedding-8b there: proven on
+          # A30 + driver 590 and already on the node, so no pull. Pinned
+          # rather than tracking the tag, per the gpt-oss-120b / qwen3-8-27b
+          # convention. Verified 2026-09-07 inside this image: the reranker
+          # config resolves to runner=pooling, convert=classify,
+          # cross-encoder, bf16; the CLI has --runner, --convert,
+          # --hf-overrides and --chat-template.
+          image: vllm/vllm-openai@sha256:6fc52be4609fc19b09c163be2556976447cc844b8d0d817f19bc9e1f44b48d5a
+          args:
+            # Full BF16 checkpoint, deliberately not a quantized one. vLLM
+            # cannot combine FP8 / compressed-tensors / bitsandbytes with the
+            # sequence-classification remap below (vllm-project/vllm#20041
+            # and #33970, both closed "not planned"), the A30 is Ampere with
+            # no FP8 anyway, and weight-only int4 buys nothing for a
+            # prefill-only workload. 4B params are ~7.5 GiB on a 24 GiB card.
+            - "--model"
+            - "Qwen/Qwen3-Reranker-4B"
+            - "--served-model-name"
+            - "qwen3-reranker-4b"
+            # The checkpoint is a plain Qwen3ForCausalLM; the relevance score
+            # is P("yes") vs P("no") at the last position. These overrides
+            # are the recipe from the model card: remap to a classifier whose
+            # two logits are the "no"/"yes" rows of the LM head.
+            - "--runner"
+            - "pooling"
+            - "--convert"
+            - "classify"
+            - "--hf-overrides"
+            - '{"architectures": ["Qwen3ForSequenceClassification"], "classifier_from_token": ["no", "yes"], "is_original_qwen3_reranker": true}'
+            # REQUIRED. In vLLM 0.14.1 only jina_vl has a built-in score
+            # template; without this flag the server concatenates query and
+            # document raw and the scores are meaningless. Served from the
+            # configmap (see there) so the deployment does not depend on the
+            # image's examples/ layout.
+            - "--chat-template"
+            - "/etc/vllm/qwen3_reranker.jinja"
+            - "--config"
+            - "/etc/vllm/qwen3-reranker-4b.yaml"
+            - "--port"
+            - "8000"
+          ports:
+            - containerPort: 8000
+          # Same probe shape as qwen3-8-27b / gpt-oss-120b: without them the
+          # pod is Ready the moment the container execs and LiteLLM routes
+          # into a backend still loading weights (the 2026-08-07 outage).
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            periodSeconds: 15
+            failureThreshold: 120
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 5
+          # No NVIDIA_VISIBLE_DEVICES=all / CUDA_VISIBLE_DEVICES=0 here,
+          # unlike octen-embedding-8b. Checked 2026-09-07 inside that pod: the
+          # container toolkit rewrites the variable to "void" and exposes only
+          # the allocated GPU, so the pair is dead weight on this cluster. On
+          # a cluster that honours it, it would expose every GPU on the node
+          # and hard-code index 0. Let the device plugin do it.
+          env:
+            - name: HUGGING_FACE_HUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: litellm-secret
+                  key: HF_TOKEN
+          volumeMounts:
+            - name: model-cache
+              mountPath: /root/.cache/huggingface
+            - name: vllm-config
+              mountPath: /etc/vllm
+          # Modest by design: weight loading peaks around 10 GiB of host RAM
+          # for an 8 GB checkpoint, and scoring is GPU-bound. gx16 is a
+          # ~1.7 TiB / 200-core node at 5% CPU requests, so this is noise
+          # there, but it keeps the pod from being evicted first.
+          resources:
+            limits:
+              nvidia.com/gpu: "1"
+              memory: "32Gi"
+              cpu: "8"
+            requests:
+              nvidia.com/gpu: "1"
+              memory: "16Gi"
+              cpu: "4"
+      volumes:
+        - name: model-cache
+          persistentVolumeClaim:
+            claimName: qwen3-reranker-4b-cache
+        - name: vllm-config
+          configMap:
+            name: qwen3-reranker-4b-config

@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: qwen3-reranker-4b-config
+data:
+  # vLLM engine args, mounted at /etc/vllm and passed via --config.
+  qwen3-reranker-4b.yaml: |
+    # 16384, not the model's native 40960: the limit is per query+document
+    # pair (plus ~60 template tokens), not per request, and a cross-encoder
+    # scores retrieval chunks, not whole files. 16K is ~24 dense English or
+    # ~18 dense German pages per document. Callers can shorten longer
+    # documents per request with truncate_prompt_tokens. Same value as
+    # octen-embedding-8b. KV cost is 144 KiB/token (36 layers x 8 KV heads x
+    # 128 dim, bf16), so a max-length pair takes 2.3 GiB of the ~12 GiB KV
+    # budget left on a 24 GiB A30 after ~7.5 GiB of weights.
+    max-model-len: 16384
+    # Kept equal to max-model-len so a max-length pair can always be
+    # scheduled in one prefill step. Concurrency comes from max-num-seqs:
+    # a rerank request with N documents becomes N sequences.
+    max-num-batched-tokens: 16384
+    max-num-seqs: 128
+    # 0.90 (vLLM default), not the 0.95 used on the H100 deployments: nothing
+    # else shares the card, but this is the first reranker here and the
+    # headroom costs ~1 GiB of KV. Raise after reading "GPU KV cache size"
+    # from the startup logs if it proves too tight.
+    gpu-memory-utilization: 0.90
+  # Score template, copied byte-for-byte (624 bytes, ends in "</think>\n\n")
+  # from /vllm-workspace/examples/pooling/score/template/qwen3_reranker.jinja
+  # in the pinned image. Passed to vLLM via --chat-template, which the
+  # pooling score path uses as its score template. It renders the official
+  # Qwen3-Reranker prompt: the "system" message carries the instruction
+  # (defaulting to the model card's wording when the request has none),
+  # "query" and "document" are the pair being scored.
+  #
+  # |+ (keep) is deliberate: the trailing blank line IS part of the prompt
+  # and this key must stay last in the map so nothing else is swallowed.
+  qwen3_reranker.jinja: |+
+    <|im_start|>system
+    Judge whether the Document meets the requirements based on the Query and the Instruct provided. Note that the answer can only be "yes" or "no".<|im_end|>
+    <|im_start|>user
+    <Instruct>: {{ messages | selectattr("role", "eq", "system") | map(attribute="content") | first | default("Given a web search query, retrieve relevant passages that answer the query") }}
+    <Query>: {{ messages | selectattr("role", "eq", "query") | map(attribute="content") | first }}
+    <Document>: {{ messages | selectattr("role", "eq", "document") | map(attribute="content") | first }}<|im_end|>
+    <|im_start|>assistant
+    <think>
+
+    </think>
+

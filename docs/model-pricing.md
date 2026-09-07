@@ -53,6 +53,7 @@ USD per 1M tokens. `n` = number of serverless providers surveyed.
 | `qwen3-8-27b` | qwen/qwen3.8-27b | 0.40 | 3.00 | 12 | median (in 0.32–0.48, out 2.50–3.40) |
 | `octen-embedding-8b` | qwen/qwen3-embedding-8b | 0.04 | 0 | 5 | median (0.01–0.10) |
 | `qwen3-vl-embedding-8b` | qwen/qwen3-embedding-8b | 0.04 | 0 | 5 | **proxy** — same as above |
+| `qwen3-reranker-4b` | Qwen/Qwen3-Reranker-4B | 0.025 | 0 | 1 | sole provider (DeepInfra, surveyed 2026-09-07); **spend logs 0 today**, see note |
 | `minilm-embedding` | sentence-transformers/all-MiniLM-L6-v2 | 0.005 | 0 | 1 | sole provider |
 | `qwen-image-edit` | image gen/edit market average | $0.04/image | — | 18 | mean of mainstream image APIs |
 
@@ -76,9 +77,9 @@ per request depending on which deployment the router picked. That's why both
 sources carry identical values here, and why the drift check in
 [Refreshing the numbers](#refreshing-the-numbers) is worth running after any edit.
 
-For the same reason, don't add the six DB-only models (`granite-4-h-tiny`,
+For the same reason, don't add the eight DB-only models (`granite-4-h-tiny`,
 `minilm-embedding`, `ministral-3-14b`, `qwen3-omni`, `qwen3-vl-32b`,
-`qwen3-vl-embedding-8b`) to the configmap. They are fully priced via
+`qwen3-vl-embedding-8b`, `qwen3-8-27b`, `qwen3-reranker-4b`) to the configmap. They are fully priced via
 [model-catalog.json](../scripts/model-catalog.json); listing them in both places
 would only create duplicate deployments and a second place for costs to drift.
 
@@ -122,6 +123,19 @@ costs to serve.
   matters because this model routes through the fork's custom `aihpi-provider`.
   **Whether cost tracking fires for it at all is still unverified** — confirm
   against a real `LiteLLM_SpendLogs` row before relying on its spend figures.
+- **`qwen3-reranker-4b`** logs `spend = 0` on every request, whatever rate is
+  registered. LiteLLM prices rerank calls per query, as
+  `input_cost_per_query x search_units`, and only when the backend response
+  carries `search_units`. The `hosted_vllm` rerank transform in our fork
+  (litellm 1.101.0) fills `total_tokens` from vLLM's `usage` but never sets
+  `search_units`, so the cost formula returns 0. Requests and token counts ARE
+  logged (`prompt_tokens` = total tokens of all query+document pairs), so
+  usage is visible; only the weighted spend is missing. The 0.025 above is
+  DeepInfra's rate for the identical checkpoint, kept in the catalog as
+  `input_cost_per_token` so the number is on record. To make it bite, the
+  fork needs a one-line change setting `search_units` (e.g. 1 per call) in
+  `HostedVLLMRerankConfig._transform_response`, after which
+  `input_cost_per_query` becomes the field that matters.
 
 ## How the costs reach the database
 
@@ -249,3 +263,4 @@ next person can tell how stale the numbers are.
 - [Qwen Image Edit on fal.ai](https://fal.ai/models/fal-ai/qwen-image-edit)
 - [Octen-Embedding-8B model card](https://huggingface.co/Octen/Octen-Embedding-8B) — confirms it is fine-tuned from Qwen3-Embedding-8B
 - [LiteLLM custom pricing docs](https://docs.litellm.ai/docs/proxy/custom_pricing)
+- [Qwen3-Reranker-4B on DeepInfra](https://deepinfra.com/Qwen/Qwen3-Reranker-4B), $0.025 / 1M tokens, the only serverless listing of this exact checkpoint found on 2026-09-07
