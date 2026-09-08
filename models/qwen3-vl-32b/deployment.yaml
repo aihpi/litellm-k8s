@@ -48,9 +48,9 @@ spec:
           resources:
             limits:
               nvidia.com/gpu: "1"
-              memory: "256Gi"
-              cpu: "64"
-            requests:
-              nvidia.com/gpu: "1"
               memory: "192Gi"
               cpu: "32"
+            requests:
+              nvidia.com/gpu: "1"
+              memory: "128Gi"
+              cpu: "8"
