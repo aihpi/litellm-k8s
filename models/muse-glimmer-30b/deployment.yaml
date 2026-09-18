@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: muse-glimmer-30b
+  labels:
+    app: muse-glimmer-30b
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: muse-glimmer-30b
+  template:
+    metadata:
+      labels:
+        app: muse-glimmer-30b
+    spec:
+      nodeSelector:
+        accelerator: h100
+      containers:
+        - name: vllm
+          # Pinned per the vllm-project/recipes entry for this model
+          # (https://recipes.vllm.ai/meta-models/Muse-Glimmer-30B) — v0.28.0
+          # is what ships the muse_glimmer tool-call/reasoning parser plugin
+          # this model needs. Do not float to :latest.
+          image: vllm/vllm-openai:v0.28.0
+          args:
+            # FP8 block-scaled checkpoint: vision tower + embeddings stay
+            # BF16, everything else is block-quantized. 32.78 GiB vs 59.58
+            # GiB for the reference BF16 weights — comfortably inside one
+            # 80GiB H100 with plenty left for KV. (NVFP4 is smaller still but
+            # Blackwell-only, so it isn't an option on this card.)
+            - "--model"
+            - "RedHatAI/Muse-Glimmer-30B-FP8-block"
+            - "--served-model-name"
+            - "muse-glimmer-30b"
+            - "--config"
+            - "/etc/vllm/Muse-Glimmer_Hopper.yaml"
+            - "--tensor-parallel-size"
+            - "1"
+            - "--gpu-memory-utilization"
+            - "0.90"
+            - "--port"
+            - "8000"
+          ports:
+            - containerPort: 8000
+          # vLLM needs minutes to load; without these the pod reports Ready
+          # as soon as the container execs and LiteLLM routes into a dead
+          # backend (root cause of the 2026-08-07 silent outage, see
+          # gpt-oss-120b/deployment.yaml). Same shape here.
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            periodSeconds: 15
+            failureThreshold: 80
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 5
+          env:
+            - name: PYTORCH_ALLOC_CONF
+              value: "expandable_segments:True"
+            - name: HUGGING_FACE_HUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: litellm-secret
+                  key: HF_TOKEN
+          volumeMounts:
+            - name: model-cache
+              mountPath: /root/.cache/huggingface
+            - name: vllm-config
+              mountPath: /etc/vllm
+          resources:
+            limits:
+              nvidia.com/gpu: "1"
+              memory: "128Gi"
+              cpu: "32"
+            requests:
+              nvidia.com/gpu: "1"
+              memory: "96Gi"
+              cpu: "16"
+      volumes:
+        - name: model-cache
+          persistentVolumeClaim:
+            claimName: muse-glimmer-30b-cache
+        - name: vllm-config
+          configMap:
+            name: muse-glimmer-30b-config

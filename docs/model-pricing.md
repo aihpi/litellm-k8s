@@ -56,6 +56,7 @@ USD per 1M tokens. `n` = number of serverless providers surveyed.
 | `qwen3-reranker-4b` | Qwen/Qwen3-Reranker-4B | 0.025 | 0 | 1 | sole provider (DeepInfra, surveyed 2026-09-07); **spend logs 0 today**, see note |
 | `minilm-embedding` | sentence-transformers/all-MiniLM-L6-v2 | 0.005 | 0 | 1 | sole provider |
 | `qwen-image-edit` | image gen/edit market average | $0.04/image | — | 18 | mean of mainstream image APIs |
+| `muse-glimmer-30b` | meta/muse-glimmer-30b | 0.325 | 1.35 | 4 | median (in 0.30–0.35, out 1.10–1.50), OpenRouter, surveyed 2026-09-18 |
 
 `dinov3-embeddings-api` is unpriced because it is not registered with LiteLLM at
 all — its `images: [...]` request schema isn't OpenAI-compatible, so it can't be

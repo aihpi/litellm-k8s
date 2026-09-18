@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: muse-glimmer-30b-config
+data:
+  Muse-Glimmer_Hopper.yaml: |
+    # meta-models/Muse-Glimmer-30B: the vllm-project/recipes entry
+    # (https://recipes.vllm.ai/meta-models/Muse-Glimmer-30B) only carries
+    # validated numbers for DGX Spark (GB10, 128GiB unified memory), GB300
+    # (TP=4), RTX 5090 (NVFP4/FP8), and MI300X/MI325X/MI355X — there is no
+    # H100/Hopper entry to copy. Following the qwen3-8-27b runbook instead:
+    # start at half the model's native 131072 context and raise it after
+    # reading the "GPU KV cache size" line from the startup logs (see
+    # docs/adding-models.md#troubleshooting).
+    max-model-len: 65536
+    max-num-seqs: 8
+    max-num-batched-tokens: 4096
+    # Required together: Muse Glimmer emits channel-scoped turns
+    # (to=self/<tool>/user), not <think> tags or native JSON tool calls, so
+    # both parsers must be the muse_glimmer plugin and run at the same time.
+    enable-auto-tool-choice: true
+    tool-call-parser: muse_glimmer
+    reasoning-parser: muse_glimmer
+    # Pulls the model's published sampling defaults (temperature 1.0,
+    # top_p 0.95, top_k 64) from generation_config.json. The recipe warns
+    # greedy decoding is not reproducible for this model even with a fixed
+    # seed, so don't override to temperature 0.
+    generation-config: auto
