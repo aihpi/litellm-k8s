@@ -48,3 +48,7 @@ resources:
   - qwen3-reranker-4b/pvc.yaml
   - qwen3-reranker-4b/deployment.yaml
   - qwen3-reranker-4b/service.yaml
+  - muse-glimmer-30b/configmap.yaml
+  - muse-glimmer-30b/pvc.yaml
+  - muse-glimmer-30b/deployment.yaml
+  - muse-glimmer-30b/service.yaml
