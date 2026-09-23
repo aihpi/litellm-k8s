@@ -1,0 +1,139 @@
+# Strategic-merge patch: the `config.yaml` key is a single opaque string, so
+# kustomize can only replace it wholesale, not merge individual model_list
+# entries. This is base/litellm/configmap.yaml's config.yaml with the four
+# H100-only model_list rows removed (qwen-image-edit, gpt-oss-120b,
+# llama-3-3-70b, muse-glimmer-30b) — none of those Services exist on this
+# cluster. Keep this in sync with base/litellm/configmap.yaml by hand; there
+# is no kustomize primitive for "same file minus these keys".
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: litellm-config
+data:
+  config.yaml: |
+    litellm_settings:
+      success_callback: ["prometheus"]
+      require_auth_for_metrics_endpoint: false
+      drop_params: true
+
+      default_internal_user_params:
+        models: ["no-default-models"]
+        teams: ["kisz-default"]
+
+      key_generation_settings:
+        personal_key_generation:
+          allowed_user_roles: ["proxy_admin"]
+
+      enable_end_user_cost_tracking_prometheus_only: false
+
+      prometheus_metrics_config:
+        - group: latency_histograms
+          metrics:
+            - litellm_request_total_latency_metric
+            - litellm_llm_api_latency_metric
+            - litellm_llm_api_time_to_first_token_metric
+            - litellm_request_queue_time_seconds
+          include_labels:
+            - model
+            - requested_model
+            - api_key_alias
+            - team_alias
+        - group: overhead_latency
+          metrics:
+            - litellm_overhead_latency_metric
+          include_labels:
+            - litellm_model_name
+            - api_key_alias
+        - group: deployment_latency
+          metrics:
+            - litellm_deployment_latency_per_output_token
+          include_labels:
+            - litellm_model_name
+            - api_key_alias
+            - team_alias
+        - group: token_spend_metrics
+          metrics:
+            - litellm_input_tokens_metric
+            - litellm_output_tokens_metric
+            - litellm_total_tokens_metric
+            - litellm_spend_metric
+            - litellm_requests_metric
+          include_labels:
+            - model
+            - api_key_alias
+            - team_alias
+        - group: request_counters
+          metrics:
+            - litellm_proxy_total_requests_metric
+          include_labels:
+            - requested_model
+            - api_key_alias
+            - team_alias
+            - status_code
+        - group: deployment_counters
+          metrics:
+            - litellm_deployment_total_requests
+            - litellm_deployment_success_responses
+          include_labels:
+            - requested_model
+            - litellm_model_name
+            - api_key_alias
+            - team_alias
+
+    general_settings:
+      store_model_in_db: true
+
+      coordination_redis:
+        host: os.environ/REDIS_HOST
+        port: os.environ/REDIS_PORT
+        password: os.environ/REDIS_PASSWORD
+
+      pass_through_endpoints:
+        - path: "/v1/lora/upload"
+          target: "http://lora-manager:8000/upload"
+          auth: true
+          forward_headers: true
+        - path: "/v1/lora/adapters"
+          target: "http://lora-manager:8000/adapters"
+          auth: true
+          forward_headers: true
+        - path: "/v1/lora/delete"
+          target: "http://lora-manager:8000/delete"
+          auth: true
+          forward_headers: true
+
+    # A30-only subset of base/litellm/configmap.yaml's model_list. The
+    # DB-only models (granite-4-h-tiny, ministral-3-14b, qwen3-vl-embedding-8b,
+    # qwen3-reranker-4b, minilm-embedding) aren't here for the same reason
+    # they aren't in prod's config.yaml either — they're registered via
+    # scripts/sync-models-to-db.sh against THIS cluster's own Postgres/LiteLLM
+    # after deploy, not via config.yaml.
+    model_list:
+      - model_name: octen-embedding-8b
+        litellm_params:
+          model: openai/octen-embedding-8b
+          api_base: http://octen-embedding-8b-service:8000/v1
+          api_key: dummy
+          encoding_format: float
+          input_cost_per_token: 4.0e-8    # $0.04 / 1M
+          output_cost_per_token: 0.0      # embeddings return no output tokens
+        model_info:
+          metadata:
+            mode: embedding
+      - model_name: gemma-4-31b
+        litellm_params:
+          model: openai/gemma-4-31b
+          api_base: http://gemma-4-31b-service:8000/v1
+          api_key: dummy
+          input_cost_per_token: 1.4e-7    # $0.14 / 1M
+          output_cost_per_token: 4.0e-7   # $0.40 / 1M
+      - model_name: qwen-3-5-9b
+        litellm_params:
+          model: openai/qwen-3-5-9b
+          api_base: http://qwen-3-5-9b-service:8000/v1
+          api_key: dummy
+          extra_body:
+            chat_template_kwargs:
+              enable_thinking: false
+          input_cost_per_token: 1.0e-7    # $0.10 / 1M
+          output_cost_per_token: 1.5e-7   # $0.15 / 1M

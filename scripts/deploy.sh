@@ -40,7 +40,12 @@ kubectl wait --for=condition=ready pod -l app=postgres -n "$NAMESPACE" --timeout
 echo "Waiting for LiteLLM..."
 kubectl rollout status deployment/litellm-proxy -n "$NAMESPACE" --timeout=180s
 
-kubectl apply -k models/
+# aisc has no H100 nodes, so its overlay lists an A30-only model subset
+# directly (see overlays/aisc/kustomization.yaml) instead of the full
+# models/ aggregate applied here for every other env.
+if [ "$ENV" != "aisc" ]; then
+  kubectl apply -k models/
+fi
 
 if [ -d "overlays/${ENV}" ]; then
   kubectl apply -k "overlays/${ENV}/"

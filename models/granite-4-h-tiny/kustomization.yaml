@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Lets overlays/aisc reference this directory directly (kustomize's default
+# load restrictor blocks a raw cross-directory file reference unless the
+# target directory is itself a kustomization root). models/kustomization.yaml
+# still lists these same files by path for prod/dev — both work.
+resources:
+  - pvc.yaml
+  - deployment.yaml
+  - service.yaml

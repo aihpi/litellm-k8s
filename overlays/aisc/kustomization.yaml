@@ -1,0 +1,35 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: litellm
+
+# aisc has no H100 nodes, only A30s (24GB). Unlike overlays/prod and
+# overlays/dev, this does NOT pull in ../../models (the full 16-model
+# aggregate) — it lists only the models whose deployment.yaml nodeSelector
+# is `accelerator: a30` or `node-type: cpu`, each via its own per-model
+# kustomization.yaml (kustomize's load restrictor otherwise blocks a raw
+# cross-directory file reference — see models/granite-4-h-tiny/kustomization.yaml).
+# See docs/clusters.md for the full A30-vs-H100 breakdown and why each
+# excluded model doesn't fit.
+resources:
+  - ../../base
+  - ../../models/granite-4-h-tiny
+  - ../../models/dinov3-embeddings-api
+  - ../../models/minilm-embedding
+  - ../../models/octen-embedding-8b
+  - ../../models/qwen3-vl-embedding-8b
+  - ../../models/ministral-3-14b
+  - ../../models/gemma-4-31b
+  - ../../models/qwen-3-5-9b
+  - ../../models/qwen3-reranker-4b
+
+# Drops the H100-only rows (qwen-image-edit, gpt-oss-120b, llama-3-3-70b,
+# muse-glimmer-30b) from base/litellm/configmap.yaml's model_list — their
+# backing Services aren't deployed here, so leaving them in would register
+# dead routes with LiteLLM.
+patches:
+  - path: patches/litellm-aisc-configmap.yaml
+
+images:
+  - name: ghcr.io/aihpi/tool-litellm
+    digest: sha256:5d141c443bddfa0da77a2650800d2aa5d56a9a29ee84c493cebeebf7256f18e9

@@ -65,6 +65,14 @@ See docs/adding-models.md
 - Namespace: litellm
 - GPU Scheduling: Uses GPU requests in model deployments
 
+## Clusters
+
+Two overlays deploy the full stack: `overlays/prod` (mixed A30 + H100) and
+`overlays/aisc` (A30-only, a 9-model subset). See
+[docs/clusters.md](docs/clusters.md) for the model-by-model breakdown and
+what still needs cluster-specific values filled in before a real aisc
+deploy.
+
 ## Maintenance
 
 - Logs: kubectl logs -n litellm deployment/litellm-proxy -f
