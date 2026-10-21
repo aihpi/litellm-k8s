@@ -4,11 +4,11 @@ Models deployed via [models/kustomization.yaml](../models/kustomization.yaml). A
 
 Per-token costs for every model below are in [Model Pricing](model-pricing.md); the registry payloads live in [scripts/model-catalog.json](../scripts/model-catalog.json).
 
-**Where each model is registered.** Only 6 of the 14 are in `config.yaml`; the rest exist solely as DB rows. This is intentional — the direction of travel is DB-as-source-of-truth, and listing a model in both places creates two router deployments (see [Model Pricing](model-pricing.md#keep-configyaml-and-the-catalog-in-sync)).
+**Where each model is registered.** Only 7 of the 15 are in `config.yaml`; the rest exist solely as DB rows. This is intentional — the direction of travel is DB-as-source-of-truth, and listing a model in both places creates two router deployments (see [Model Pricing](model-pricing.md#keep-configyaml-and-the-catalog-in-sync)).
 
 | | config.yaml + DB | DB only |
 | --- | --- | --- |
-| Models | `llama-3-3-70b`, `gemma-4-31b`, `gpt-oss-120b`, `qwen-3-5-9b`, `octen-embedding-8b`, `qwen-image-edit` | `granite-4-h-tiny`, `ministral-3-14b`, `qwen3-omni`, `qwen3-vl-32b`, `qwen3-vl-embedding-8b`, `minilm-embedding`, `qwen3-8-27b`, `qwen3-reranker-4b` |
+| Models | `llama-3-3-70b`, `gemma-4-31b`, `gpt-oss-120b`, `qwen-3-5-9b`, `octen-embedding-8b`, `qwen-image-edit`, `muse-glimmer-30b` | `granite-4-h-tiny`, `ministral-3-14b`, `qwen3-omni`, `qwen3-vl-32b`, `qwen3-vl-embedding-8b`, `minilm-embedding`, `qwen3-8-27b`, `qwen3-reranker-4b` |
 | Costs set in | both, kept identical | [model-catalog.json](../scripts/model-catalog.json) |
 
 Not registered with LiteLLM: `dinov3-embeddings-api` — deployed and serving, but its usage is entirely unlogged.
@@ -24,6 +24,7 @@ Not registered with LiteLLM: `dinov3-embeddings-api` — deployed and serving, b
 | qwen3-vl-32b | qwen3-vl-32b-service | Qwen3 VL 32B vision-language model |
 | qwen3-omni | qwen3-omni-service | Qwen3 Omni multimodal (vllm-omni image) |
 | qwen3-8-27b | qwen3-8-27b-service | Qwen3.8 27B FP8, 128K context, single H100; routed via `hosted_vllm/` |
+| muse-glimmer-30b | muse-glimmer-30b-service | Muse Glimmer 30B dense vision-language model, FP8 block checkpoint, 64K context (native 128K, halved pending H100 KV headroom check — recipe has no Hopper numbers), single H100. Non-standard tool-call/reasoning output framing, needs vLLM v0.28.0's `muse_glimmer` parser plugin |
 | qwen-image-edit | qwen-image-edit | Image editing; routed via custom `aihpi-provider` in the LiteLLM fork |
 | octen-embedding-8b | octen-embedding-8b-service | Embedding model (4096 dims) |
 | qwen3-vl-embedding-8b | qwen3-vl-embedding-8b-service | Vision-language embedding model |
