@@ -13,6 +13,11 @@ spec:
   # /adapters.
   strategy:
     type: Recreate
+  # Must exceed the startup probe ceiling (120 x 15s = 30 min). The default
+  # 600s makes `rollout status` fail and the Deployment show
+  # ProgressDeadlineExceeded on a cold HF download while the pod is still
+  # loading fine.
+  progressDeadlineSeconds: 2100
   selector:
     matchLabels:
       app: gemma-4-31b
