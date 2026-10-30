@@ -6,6 +6,13 @@ metadata:
     app: gemma-4-31b
 spec:
   replicas: 1
+  # Recreate, not RollingUpdate: one replica needing 4 A30s on one node. The
+  # default surge pod cannot schedule while the old pod holds the GPUs, so an
+  # apply sits Pending until ProgressDeadlineExceeded and the old pod never
+  # gets probes. Costs ~5 min downtime per rollout; LoRAs come back from
+  # /adapters.
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: gemma-4-31b
