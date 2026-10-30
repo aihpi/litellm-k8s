@@ -65,6 +65,35 @@ spec:
                 --port 8000
           ports:
             - containerPort: 8000
+          # Probes added after 2026-10-30: EngineCore died (EngineDeadError),
+          # the api_server logged "Finished server process" and then hung
+          # instead of exiting. Container stayed Running/ready with port 8000
+          # refusing connections for ~1.5h until the pod was deleted by hand.
+          # Same values as gpt-oss-120b. A liveness restart is an in-place
+          # container restart: the 4 GPUs stay allocated and the wrapper
+          # re-discovers /adapters as on any start.
+          startupProbe:
+            # TP=4 load from warm cache is minutes; 120 x 15s = 30min ceiling
+            # covers a cold HF download of the 31B weights.
+            httpGet:
+              path: /health
+              port: 8000
+            periodSeconds: 15
+            failureThreshold: 120
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 5
           env:
             - name: HUGGING_FACE_HUB_TOKEN
               valueFrom:
