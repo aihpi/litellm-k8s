@@ -47,4 +47,4 @@ replicas:
 
 images:
   - name: ghcr.io/aihpi/tool-litellm
-    digest: sha256:cb59a022a562d8dde1bb1f317ad625743cd0fb67d9c161977d22de3433c072a2
+    digest: sha256:65962abe571919cd01cfb6a58ee68c34ffad293afa8ca9d39a48d270b8b5c2af
