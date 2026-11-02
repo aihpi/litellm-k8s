@@ -119,6 +119,12 @@ spec:
               mountPath: /root/.cache/huggingface
             - name: adapters
               mountPath: /adapters
+            # Default /dev/shm is 64 MiB. Four TP workers plus NCCL exhaust it and a
+            # worker dies by SIGBUS with no traceback (2026-11-02: pod sat Ready but
+            # dead on :8000, then every in-place restart died at add_lora). Same
+            # shape as qwen3-omni.
+            - name: shm
+              mountPath: /dev/shm
           resources:
             limits:
               nvidia.com/gpu: "4"
@@ -131,3 +137,7 @@ spec:
         - name: adapters
           persistentVolumeClaim:
             claimName: gemma-4-31b-adapters
+        - name: shm
+          emptyDir:
+            medium: Memory
+            sizeLimit: "16Gi"
