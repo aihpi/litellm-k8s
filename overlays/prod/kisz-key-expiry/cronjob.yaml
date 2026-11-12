@@ -43,9 +43,14 @@ spec:
                   value: http://litellm-service.litellm.svc:4000
                 - name: KEY_EXPIRY_TEAM_ID
                   value: kisz-default
+                # Keys owned by a member of these teams are left alone. The
+                # job reads the members through /team/info and fails before
+                # changing any key if a team cannot be read.
+                - name: KEY_EXPIRY_EXEMPT_TEAMS
+                  value: kisz-internal
                 - name: KEY_EXPIRY_APPLY
                   value: "false"
-                # Admin key restricted to /key/list and /key/update; not the
+                # Admin key for /key/list, /key/update and /team/info; not the
                 # master key.
                 - name: LITELLM_KEY_POLICY_KEY
                   valueFrom:
