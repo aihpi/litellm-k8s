@@ -51,9 +51,9 @@ replicas:
 
 images:
   # Used in prod only by the kisz-key-expiry CronJob. Built from
-  # aihpi/tool-litellm@112eab0 (first build with app/key_expiry.py). Pinned by
-  # hand; the pin bot only rewrites the tool-litellm entry below.
+  # aihpi/tool-litellm@dc36650 (two-extension rule for owner-set end dates).
+  # Pinned by hand; the pin bot only rewrites the tool-litellm entry below.
   - name: ghcr.io/aihpi/tool-kisz-auth-wrapper
-    digest: sha256:49f109c29b233d30faab282ea435086a8afed760eb1698236f14d3b2469a6d93
+    digest: sha256:41dd3ff7686d3d7a21e8f821c640927cb3d87e0269d33f664fadd8ee66fe9314
   - name: ghcr.io/aihpi/tool-litellm
     digest: sha256:5d75cf41c8f9502c46eaa225334fbae1a77655aec3237607d660a016933ff10e
