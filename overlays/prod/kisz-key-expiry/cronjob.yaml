@@ -10,8 +10,7 @@
 # (`kubectl -n litellm logs job/<name>`), then set it to "true".
 #
 # Needs the Secret kisz-key-expiry-secret (sealed-secrets/kisz-key-expiry.yaml)
-# and an image built with app/key_expiry.py; see the comments in
-# ../kustomization.yaml before enabling it there.
+# and an image built with app/key_expiry.py (digest pin in ../kustomization.yaml).
 apiVersion: batch/v1
 kind: CronJob
 metadata:

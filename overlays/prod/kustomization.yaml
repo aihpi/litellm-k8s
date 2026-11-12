@@ -15,13 +15,10 @@ resources:
   # The tunnel passcode. nginx and the sidecar both reference this Secret and
   # will not start without it. Rotate by re-sealing (docs/opentela-slurm.md).
   - sealed-secrets/otela-tunnel.yaml
-  # Nightly end-date policy for kisz-default keys. Uncomment both lines once
-  # (1) sealed-secrets/kisz-key-expiry.yaml exists and (2) the
-  # tool-kisz-auth-wrapper image containing app/key_expiry.py is published and
-  # its digest is pinned under `images:` below (name:
-  # ghcr.io/aihpi/tool-kisz-auth-wrapper, digest: sha256:...).
-  # - kisz-key-expiry/cronjob.yaml
-  # - sealed-secrets/kisz-key-expiry.yaml
+  # Nightly end-date policy for kisz-default keys (dry run until
+  # KEY_EXPIRY_APPLY is "true"). Its image is pinned under `images:` below.
+  - kisz-key-expiry/cronjob.yaml
+  - sealed-secrets/kisz-key-expiry.yaml
 
 patches:
   - path: patches/litellm-prod.yaml
@@ -53,5 +50,10 @@ replicas:
     count: 0
 
 images:
+  # Used in prod only by the kisz-key-expiry CronJob. Built from
+  # aihpi/tool-litellm@112eab0 (first build with app/key_expiry.py). Pinned by
+  # hand; the pin bot only rewrites the tool-litellm entry below.
+  - name: ghcr.io/aihpi/tool-kisz-auth-wrapper
+    digest: sha256:49f109c29b233d30faab282ea435086a8afed760eb1698236f14d3b2469a6d93
   - name: ghcr.io/aihpi/tool-litellm
     digest: sha256:1ecf7697505188a78c8ebfe075401fc65b09d5405ea12c13a4339efad7246476
