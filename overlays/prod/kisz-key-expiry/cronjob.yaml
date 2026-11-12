@@ -1,0 +1,62 @@
+# Nightly end-date policy for the keys of LiteLLM team kisz-default.
+#
+# `python -m app.key_expiry` (aihpi/tool-litellm, kisz-auth-wrapper/) lists
+# every key of the team. A key with no end date, or one that ends too late,
+# gets the end of its period: 31.03, 30.06, 30.09 or 31.12, i.e. 00:00
+# Europe/Berlin on the 1st of the following month. Other teams are not touched.
+#
+# Dry run by default: with KEY_EXPIRY_APPLY "false" the job only prints what it
+# would change. Read the logs of the first runs
+# (`kubectl -n litellm logs job/<name>`), then set it to "true".
+#
+# Needs the Secret kisz-key-expiry-secret (sealed-secrets/kisz-key-expiry.yaml)
+# and an image built with app/key_expiry.py; see the comments in
+# ../kustomization.yaml before enabling it there.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: kisz-key-expiry
+  labels:
+    app: kisz-key-expiry
+spec:
+  schedule: "5 0 * * *"
+  timeZone: Europe/Berlin
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app: kisz-key-expiry
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: key-expiry
+              # Pinned by digest through `images:` in ../kustomization.yaml.
+              image: ghcr.io/aihpi/tool-kisz-auth-wrapper:aihpi-provider
+              workingDir: /app
+              command: ["python", "-m", "app.key_expiry"]
+              env:
+                - name: LITELLM_BASE_URL
+                  value: http://litellm-service.litellm.svc:4000
+                - name: KEY_EXPIRY_TEAM_ID
+                  value: kisz-default
+                - name: KEY_EXPIRY_APPLY
+                  value: "false"
+                # Admin key restricted to /key/list and /key/update; not the
+                # master key.
+                - name: LITELLM_KEY_POLICY_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: kisz-key-expiry-secret
+                      key: LITELLM_KEY_POLICY_KEY
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  cpu: 200m
+                  memory: 128Mi

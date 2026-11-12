@@ -1,0 +1,13 @@
+---
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: kisz-key-expiry-secret
+  namespace: litellm
+spec:
+  encryptedData:
+    LITELLM_KEY_POLICY_KEY: AgAq/XbsssEeSR/eX5YhUqJstEC4x2MX1/5S3082dw9OnWS6qWL1E/8v6gpwdwmI6rYGCoNEEOf2HERUIH1VqYn3JkpPeWiIk8l2iAcKju+F++w8GX56ueL6u9Xwr73ij2tEcnn9fJYlygCqgGLC5MiEv4NYcxUr7uXF76Inu4OLK99kd+6UvHH56QIIjFblmdx+qfgbhCrK6XydIVaFzpe75XJeq1haNloYyStw8GvHwEQQXhyZTfq9TarDoz3bYsPx9+aYClvm63EVbrNYlbd6QB8FdKo5mmR8ItGFanCtrxhi7oDBNCNCYPjfc+jb3MjyioLUJ4gzDB7Y6//oiPWNILYNs4DW2iyLqQgiIJjqWvN6RFil5JlaPRTpie79j6ieqUQv19JJeIF/1GtYFBGfKTr0aDfOGvAxlWZtL8tZykCyL1lMGtnG2e6DKbdO8InWtXQtjeHOJ4Fv9s1IYCDQzlb6CUauBzd0laXBItN7WW4stp+SjirZWazuuj3ewfPpDnu61ermyenyqKlCpshSSysexUivuRYrcqaEHZjVQ5xXYpLE1gn1kMim9alcu3DMi9fPFDlCGJh4X2lz+mdoh2OrjMkLDsXHHQOgmpSu6yeQMFcxaTow/55SluRRn/QglHzkEtCCVojtUeIXBYx1odS0+z4teLYCqrySJhA6Lgl0ybMo/kO8bE0pOdbI+CHbe1nkuGOVGCnvXHcSrAC/jBVIJAs4h2Xo
+  template:
+    metadata:
+      name: kisz-key-expiry-secret
+      namespace: litellm
