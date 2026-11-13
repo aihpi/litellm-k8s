@@ -44,6 +44,7 @@ kubectl apply -k models/
 
 # Agent definitions and RBAC in namespace kiseno-agents. A separate kustomize
 # root, because the overlay itself forces its own namespace on everything.
+# In prod the Argo CD Application `kiseno-agents` syncs the same folder.
 if [ -d "overlays/${ENV}/kiseno-agents" ]; then
   kubectl apply -k "overlays/${ENV}/kiseno-agents/"
 fi
