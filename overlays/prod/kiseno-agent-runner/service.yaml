@@ -1,0 +1,15 @@
+# ClusterIP only. No Ingress, no LoadBalancer, no nginx route.
+apiVersion: v1
+kind: Service
+metadata:
+  name: kiseno-agent-runner
+  labels:
+    app: kiseno-agent-runner
+spec:
+  type: ClusterIP
+  selector:
+    app: kiseno-agent-runner
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

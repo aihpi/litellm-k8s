@@ -19,6 +19,21 @@ resources:
   # KEY_EXPIRY_APPLY is "true"). Its image is pinned under `images:` below.
   - kisz-key-expiry/cronjob.yaml
   - sealed-secrets/kisz-key-expiry.yaml
+  # KISENO agent runner: the A2A backend behind LiteLLM's /a2a/{agent}.
+  # ClusterIP only, ingress limited to the LiteLLM pods. Its agent definitions
+  # and RBAC live in namespace kiseno-agents and are a separate kustomize root
+  # (kiseno-agents/), applied by scripts/deploy.sh.
+  - kiseno-agent-runner/serviceaccount.yaml
+  - kiseno-agent-runner/deployment.yaml
+  - kiseno-agent-runner/service.yaml
+  - kiseno-agent-runner/networkpolicy.yaml
+  # TODO before merge: seal kiseno-agent-runner-secret and uncomment.
+  # - sealed-secrets/kiseno-agent-runner.yaml
+  # Qwen-Bot, the Slack front end (Socket Mode, outbound only, no Service).
+  - kiseno-slack-bot/serviceaccount.yaml
+  - kiseno-slack-bot/deployment.yaml
+  # TODO before merge: seal kiseno-slack-bot-secret and uncomment.
+  # - sealed-secrets/kiseno-slack-bot.yaml
 
 patches:
   - path: patches/litellm-prod.yaml
@@ -50,6 +65,14 @@ replicas:
     count: 0
 
 images:
+  # KISENO agent runner, built from aihpi/tool-litellm@75f4909. Pinned by hand;
+  # the pin bot only rewrites the tool-litellm entry at the end of this list.
+  - name: ghcr.io/aihpi/tool-kiseno-agent-runner
+    digest: sha256:0b3fd49f808101a0fd458ef672ab4c4e2df392ede95a97f388eb826ccd4a8a10
+  # Qwen-Bot, built from aihpi/tool-litellm@a75cb12. Pinned by hand like the
+  # runner.
+  - name: ghcr.io/aihpi/tool-kiseno-slack-bot
+    digest: sha256:770da1fa8f3d8800dca012d56b803458a4a4ddc3f063835b0070eb0870b74d30
   # Used in prod only by the kisz-key-expiry CronJob. Built from
   # aihpi/tool-litellm@bb97c3a (exempt teams, two-extension rule).
   # Pinned by hand; the pin bot only rewrites the tool-litellm entry below.

@@ -42,6 +42,12 @@ kubectl rollout status deployment/litellm-proxy -n "$NAMESPACE" --timeout=180s
 
 kubectl apply -k models/
 
+# Agent definitions and RBAC in namespace kiseno-agents. A separate kustomize
+# root, because the overlay itself forces its own namespace on everything.
+if [ -d "overlays/${ENV}/kiseno-agents" ]; then
+  kubectl apply -k "overlays/${ENV}/kiseno-agents/"
+fi
+
 if [ -d "overlays/${ENV}" ]; then
   kubectl apply -k "overlays/${ENV}/"
 fi

@@ -1,0 +1,27 @@
+# Only the LiteLLM proxy pods may call the runner. Everything else in the
+# cluster is refused on the pod network. The kubelet's probes come from the
+# node and are not affected.
+#
+# Needs a CNI that enforces NetworkPolicy. Without one this object is accepted
+# and has no effect; the bearer token (RUNNER_INBOUND_TOKEN) is then the only
+# barrier.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kiseno-agent-runner
+  labels:
+    app: kiseno-agent-runner
+spec:
+  podSelector:
+    matchLabels:
+      app: kiseno-agent-runner
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: litellm
+      ports:
+        - protocol: TCP
+          port: 8080

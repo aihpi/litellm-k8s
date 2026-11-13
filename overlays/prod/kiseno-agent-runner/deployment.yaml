@@ -1,0 +1,93 @@
+# KISENO agent runner (aihpi/tool-litellm, kiseno-agent-runner/): the A2A
+# backend behind LiteLLM's /a2a/{agent} route.
+#
+# It reads the agent and skill ConfigMaps in namespace kiseno-agents, registers
+# one LiteLLM agent per agent.yaml at RUNNER_PUBLIC_URL/agents/<name>/ and
+# mints one key per agent. Every model and tool call goes back through LiteLLM.
+#
+# Reachable only inside the cluster, and only from the LiteLLM pods
+# (networkpolicy.yaml). `GET /status` shows agents and the last sync report.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kiseno-agent-runner
+  labels:
+    app: kiseno-agent-runner
+spec:
+  # Exactly one: the agent keys live in memory. Recreate so that two runners
+  # never mint and delete each other's keys during a rollout.
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: kiseno-agent-runner
+  template:
+    metadata:
+      labels:
+        app: kiseno-agent-runner
+    spec:
+      serviceAccountName: kiseno-agent-runner
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: agent-runner
+          # Pinned by digest through `images:` in ../kustomization.yaml.
+          image: ghcr.io/aihpi/tool-kiseno-agent-runner:aihpi-provider
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: LITELLM_BASE_URL
+              value: http://litellm-service.litellm.svc:4000
+            # How LiteLLM reaches this service. Agents whose URL starts with
+            # "<this>/agents/" are the ones this runner manages.
+            - name: RUNNER_PUBLIC_URL
+              value: http://kiseno-agent-runner.litellm.svc:8080
+            - name: AGENTS_SOURCE
+              value: kubernetes
+            - name: AGENTS_NAMESPACE
+              value: kiseno-agents
+            - name: DEFAULT_MODEL
+              value: qwen3-8-27b
+            # Proxy-admin key for agent management and /key/generate, /key/delete,
+            # /key/list. Must not be in team kisz-default (key-expiry job).
+            - name: LITELLM_SYNC_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: kiseno-agent-runner-secret
+                  key: LITELLM_SYNC_KEY
+            # Shared secret LiteLLM sends as bearer token on every A2A call.
+            - name: RUNNER_INBOUND_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: kiseno-agent-runner-secret
+                  key: RUNNER_INBOUND_TOKEN
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          # Ready after the first successful sync with LiteLLM.
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
