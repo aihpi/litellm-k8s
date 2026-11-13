@@ -79,4 +79,4 @@ images:
   - name: ghcr.io/aihpi/tool-kisz-auth-wrapper
     digest: sha256:a73248e471dc005d26a1a6a053038f0dfa9ca69eb4c8510f4dbb6cb129529500
   - name: ghcr.io/aihpi/tool-litellm
-    digest: sha256:14aeac4257385cb196828db36f2af564e3d9554eb180fd002bc25ba4f5bce403
+    digest: sha256:828e8011a4d414ad35ab2c2cff487355c95080a3414946410710750dbb24831d
