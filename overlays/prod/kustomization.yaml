@@ -30,10 +30,9 @@ resources:
   # TODO before merge: seal kiseno-agent-runner-secret and uncomment.
   # - sealed-secrets/kiseno-agent-runner.yaml
   # Qwen-Bot, the Slack front end (Socket Mode, outbound only, no Service).
-  # TODO before merge: pin the bot image under `images:`, seal
-  # kiseno-slack-bot-secret and uncomment these three lines.
-  # - kiseno-slack-bot/serviceaccount.yaml
-  # - kiseno-slack-bot/deployment.yaml
+  - kiseno-slack-bot/serviceaccount.yaml
+  - kiseno-slack-bot/deployment.yaml
+  # TODO before merge: seal kiseno-slack-bot-secret and uncomment.
   # - sealed-secrets/kiseno-slack-bot.yaml
 
 patches:
@@ -70,9 +69,10 @@ images:
   # the pin bot only rewrites the tool-litellm entry at the end of this list.
   - name: ghcr.io/aihpi/tool-kiseno-agent-runner
     digest: sha256:0b3fd49f808101a0fd458ef672ab4c4e2df392ede95a97f388eb826ccd4a8a10
-  # TODO before merge: Qwen-Bot image, pinned by hand like the runner.
-  # - name: ghcr.io/aihpi/tool-kiseno-slack-bot
-  #   digest: sha256:<digest>
+  # Qwen-Bot, built from aihpi/tool-litellm@a75cb12. Pinned by hand like the
+  # runner.
+  - name: ghcr.io/aihpi/tool-kiseno-slack-bot
+    digest: sha256:770da1fa8f3d8800dca012d56b803458a4a4ddc3f063835b0070eb0870b74d30
   # Used in prod only by the kisz-key-expiry CronJob. Built from
   # aihpi/tool-litellm@bb97c3a (exempt teams, two-extension rule).
   # Pinned by hand; the pin bot only rewrites the tool-litellm entry below.
