@@ -2,8 +2,14 @@
 #
 # This is its own kustomize root, not part of overlays/prod: the prod overlay
 # sets `namespace: litellm` on everything it builds, and these objects belong
-# in the namespace kiseno-agents. scripts/deploy.sh applies it for prod with
-# `kubectl apply -k overlays/prod/kiseno-agents/`.
+# in the namespace kiseno-agents.
+#
+# How it reaches the cluster: the Argo CD Application `kiseno-agents` (project
+# litellm-prod, this path at main, manual sync) owns it. The Application
+# `litellm-prod-app` only tracks overlays/prod and does not build this folder.
+# So a change here goes live by syncing `kiseno-agents` in Argo CD; the runner
+# picks it up within its sync interval. scripts/deploy.sh applies the same
+# folder with `kubectl apply -k`, for a cluster without that Application.
 #
 # agents-repo/ is an unchanged copy of
 # kiseno-agent-runner/examples/agents-repo/ from aihpi/tool-litellm@a75cb12
