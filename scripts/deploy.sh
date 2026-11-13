@@ -42,9 +42,12 @@ kubectl rollout status deployment/litellm-proxy -n "$NAMESPACE" --timeout=180s
 
 kubectl apply -k models/
 
-# Agent definitions and RBAC in namespace kiseno-agents. A separate kustomize
-# root, because the overlay itself forces its own namespace on everything.
-# In prod the Argo CD Application `kiseno-agents` syncs the same folder.
+# Namespace kiseno-agents and the RBAC for the agent runner and the Slack bot.
+# A separate kustomize root, because the overlay itself forces its own
+# namespace on everything. In prod the Argo CD Application `kiseno-agents`
+# syncs the same folder. The agent definitions are not applied here: they come
+# from the GitLab repository kisz/agent-skillbook through the Argo CD
+# Application `agent-skillbook` (argocd/agent-skillbook.yaml).
 if [ -d "overlays/${ENV}/kiseno-agents" ]; then
   kubectl apply -k "overlays/${ENV}/kiseno-agents/"
 fi

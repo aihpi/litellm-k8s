@@ -1,4 +1,5 @@
-# Agent definitions for the KISENO agent runner and the Qwen-Bot Slack bot.
+# Namespace kiseno-agents and the read access of the KISENO agent runner and
+# the Qwen-Bot Slack bot to the ConfigMaps in it.
 #
 # This is its own kustomize root, not part of overlays/prod: the prod overlay
 # sets `namespace: litellm` on everything it builds, and these objects belong
@@ -7,20 +8,16 @@
 # How it reaches the cluster: the Argo CD Application `kiseno-agents` (project
 # litellm-prod, this path at main, manual sync) owns it. The Application
 # `litellm-prod-app` only tracks overlays/prod and does not build this folder.
-# So a change here goes live by syncing `kiseno-agents` in Argo CD; the runner
-# picks it up within its sync interval. scripts/deploy.sh applies the same
-# folder with `kubectl apply -k`, for a cluster without that Application.
+# scripts/deploy.sh applies the same folder with `kubectl apply -k`, for a
+# cluster without that Application.
 #
-# agents-repo/ is an unchanged copy of
-# kiseno-agent-runner/examples/agents-repo/ from aihpi/tool-litellm@a75cb12
-# (branch aihpi-provider), without the _template folders, its README and its
-# GitLab pipeline. It is a stand-in for the first test: the GitLab agents repo
-# with its own Argo CD Application replaces it later. Remove agents-repo/ from
-# `resources` then, or both will write the same ConfigMaps.
+# The agent and skill definitions themselves are not in this repository. They
+# live in the private GitLab repository kisz/agent-skillbook, and the Argo CD
+# Application `agent-skillbook` (../../../argocd/agent-skillbook.yaml) syncs
+# them into this namespace as ConfigMaps.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
   - namespace.yaml
   - rbac.yaml
-  - agents-repo
