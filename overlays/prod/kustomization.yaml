@@ -27,13 +27,13 @@ resources:
   - kiseno-agent-runner/deployment.yaml
   - kiseno-agent-runner/service.yaml
   - kiseno-agent-runner/networkpolicy.yaml
-  # TODO before merge: seal kiseno-agent-runner-secret and uncomment.
-  # - sealed-secrets/kiseno-agent-runner.yaml
+  # Created with scripts/seal-kiseno-secrets.sh runner.
+  - sealed-secrets/kiseno-agent-runner.yaml
   # Qwen-Bot, the Slack front end (Socket Mode, outbound only, no Service).
   - kiseno-slack-bot/serviceaccount.yaml
   - kiseno-slack-bot/deployment.yaml
-  # TODO before merge: seal kiseno-slack-bot-secret and uncomment.
-  # - sealed-secrets/kiseno-slack-bot.yaml
+  # Created with scripts/seal-kiseno-secrets.sh bot.
+  - sealed-secrets/kiseno-slack-bot.yaml
 
 patches:
   - path: patches/litellm-prod.yaml
