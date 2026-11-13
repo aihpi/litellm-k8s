@@ -65,10 +65,10 @@ replicas:
     count: 0
 
 images:
-  # KISENO agent runner, built from aihpi/tool-litellm@75f4909. Pinned by hand;
+  # KISENO agent runner, built from aihpi/tool-litellm@eca7cd8. Pinned by hand;
   # the pin bot only rewrites the tool-litellm entry at the end of this list.
   - name: ghcr.io/aihpi/tool-kiseno-agent-runner
-    digest: sha256:0b3fd49f808101a0fd458ef672ab4c4e2df392ede95a97f388eb826ccd4a8a10
+    digest: sha256:db338e2b6b5d8c588956ce27dda91948282343e746d7e1b2bc07dce211423b87
   # Qwen-Bot, built from aihpi/tool-litellm@f00973b. Pinned by hand like the
   # runner.
   - name: ghcr.io/aihpi/tool-kiseno-slack-bot
