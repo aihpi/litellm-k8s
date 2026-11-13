@@ -1,0 +1,60 @@
+# Argo CD project and application for the KISENO agent and skill definitions.
+#
+# The definitions live in the private GitLab repository kisz/agent-skillbook.
+# A merge into its main branch goes live on its own: Argo CD builds the
+# repository's kustomization into ConfigMaps in namespace kiseno-agents, and
+# the agent runner and the Slack bot read them from there.
+#
+# Applications are not managed from this repository. Apply this file by hand:
+#
+#   kubectl apply -f argocd/agent-skillbook.yaml
+#
+# Needs, already in place:
+# - a repository credential for the URL below in Argo CD (read-only deploy
+#   token);
+# - the namespace kiseno-agents, owned by the Application `kiseno-agents`
+#   (overlays/prod/kiseno-agents/).
+#
+# The project is the guard: whatever a merge request in the GitLab repository
+# contains, Argo CD can only create ConfigMaps, and only in kiseno-agents. No
+# cluster-scoped resource, no other kind, no other namespace.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: agent-skillbook
+  namespace: argocd
+spec:
+  description: KISENO agent and skill definitions from GitLab, ConfigMaps in kiseno-agents only
+  sourceRepos:
+    - https://gitlab.hpi.de/kisz/agent-skillbook.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: kiseno-agents
+  # Empty: no cluster-scoped resources. The Namespace stays with the
+  # Application `kiseno-agents`.
+  clusterResourceWhitelist: []
+  namespaceResourceWhitelist:
+    - group: ""
+      kind: ConfigMap
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: agent-skillbook
+  namespace: argocd
+spec:
+  project: agent-skillbook
+  source:
+    repoURL: https://gitlab.hpi.de/kisz/agent-skillbook.git
+    targetRevision: main
+    path: .
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kiseno-agents
+  syncPolicy:
+    # Automatic: a merged merge request goes live within minutes. prune removes
+    # the ConfigMap of a deleted agent or skill; selfHeal reverts manual edits
+    # in the cluster.
+    automated:
+      prune: true
+      selfHeal: true
