@@ -1,0 +1,81 @@
+# Qwen-Bot (aihpi/tool-litellm, kiseno-slack-bot/): the Slack front end of the
+# KISENO agents.
+#
+# Slack Socket Mode: the bot opens an outbound WebSocket to Slack and listens
+# on no port, so it has no Service, no probes and no inbound traffic. Each
+# Slack message runs as the writer's own LiteLLM user through
+# LiteLLM /a2a/{agent}.
+#
+# Outbound: slack.com, wss-*.slack.com and the LiteLLM Service.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kiseno-slack-bot
+  labels:
+    app: kiseno-slack-bot
+spec:
+  # Exactly one per Slack app: two replicas with the same app token would
+  # split the events between them. Recreate keeps that true during a rollout.
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: kiseno-slack-bot
+  template:
+    metadata:
+      labels:
+        app: kiseno-slack-bot
+    spec:
+      serviceAccountName: kiseno-slack-bot
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: slack-bot
+          # Pinned by digest through `images:` in ../kustomization.yaml.
+          image: ghcr.io/aihpi/tool-kiseno-slack-bot:aihpi-provider
+          env:
+            - name: LITELLM_BASE_URL
+              value: http://litellm-service.litellm.svc:4000
+            # Only members of this LiteLLM team get answers, and every
+            # per-user key is minted in it.
+            - name: LITELLM_TEAM_ID
+              value: qwen-bot-users
+            - name: AGENTS_NAMESPACE
+              value: kiseno-agents
+            # Shown in the "log in once at the LLM portal" reply.
+            - name: LLM_PORTAL_URL
+              value: https://api.aisc.hpi.de/ui
+            - name: SLACK_APP_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: kiseno-slack-bot-secret
+                  key: SLACK_APP_TOKEN
+            - name: SLACK_BOT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: kiseno-slack-bot-secret
+                  key: SLACK_BOT_TOKEN
+            # Proxy-admin key for /key/generate, /user/list, /team/info and
+            # /v1/agents. Treat it like the master key. Must not be in team
+            # kisz-default (key-expiry job).
+            - name: LITELLM_MINT_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: kiseno-slack-bot-secret
+                  key: LITELLM_MINT_KEY
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi

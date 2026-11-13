@@ -16,7 +16,10 @@ jobs:
 
       - name: Validate manifests
         run: |
-          find base overlays models namespaces secrets -name "*.yaml" -type f | xargs kubeval --ignore-missing-schemas
+          # agents-repo/ holds agent.yaml files for the KISENO agent runner,
+          # which are ConfigMap content, not Kubernetes manifests.
+          find base overlays models namespaces secrets -name "*.yaml" -type f \
+            -not -path "overlays/prod/kiseno-agents/agents-repo/*" | xargs kubeval --ignore-missing-schemas
 
       - name: Install kustomize
         run: |
@@ -27,6 +30,7 @@ jobs:
           ./kustomize build overlays/dev
           ./kustomize build overlays/staging
           ./kustomize build overlays/prod
+          ./kustomize build overlays/prod/kiseno-agents
 
       # Archive-safety guards for lora-manager uploads. Stdlib only (tarfile +
       # app.validation), so there is nothing to install.

@@ -1,0 +1,29 @@
+# Read access to the agent and skill ConfigMaps for the two services that run
+# in namespace litellm. Both only list today; watch is included so a later
+# switch to a watch needs no RBAC change.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: kiseno-agent-reader
+  namespace: kiseno-agents
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: kiseno-agent-reader
+  namespace: kiseno-agents
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kiseno-agent-reader
+subjects:
+  - kind: ServiceAccount
+    name: kiseno-agent-runner
+    namespace: litellm
+  - kind: ServiceAccount
+    name: kiseno-slack-bot
+    namespace: litellm

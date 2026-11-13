@@ -1,0 +1,20 @@
+# Agent definitions for the KISENO agent runner and the Qwen-Bot Slack bot.
+#
+# This is its own kustomize root, not part of overlays/prod: the prod overlay
+# sets `namespace: litellm` on everything it builds, and these objects belong
+# in the namespace kiseno-agents. scripts/deploy.sh applies it for prod with
+# `kubectl apply -k overlays/prod/kiseno-agents/`.
+#
+# agents-repo/ is an unchanged copy of
+# kiseno-agent-runner/examples/agents-repo/ from aihpi/tool-litellm@a75cb12
+# (branch aihpi-provider), without the _template folders, its README and its
+# GitLab pipeline. It is a stand-in for the first test: the GitLab agents repo
+# with its own Argo CD Application replaces it later. Remove agents-repo/ from
+# `resources` then, or both will write the same ConfigMaps.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - namespace.yaml
+  - rbac.yaml
+  - agents-repo

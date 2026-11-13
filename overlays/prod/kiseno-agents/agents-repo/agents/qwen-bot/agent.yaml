@@ -1,0 +1,20 @@
+apiVersion: kiseno/v1
+name: qwen-bot
+description: KISENO assistant in Slack. Picks the right skill and tool for workflow requests.
+model: qwen3-8-27b
+max_turns: 8
+# LiteLLM team IDs whose members may use this agent: the team's ID from the LiteLLM Teams page, not its name.
+teams:
+  - qwen-bot-users
+# Admins add MCP servers to this LiteLLM access group; the agent can then use them without a change here.
+mcp_access_groups:
+  - qwen-bot
+skills:
+  - meeting-summary
+  - workshop-entry
+skills_loading: all
+slack:
+  default: true
+  channels: []
+  listen: mentions
+  dm: true

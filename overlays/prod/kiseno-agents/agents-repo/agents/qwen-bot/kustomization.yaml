@@ -1,0 +1,12 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+generatorOptions:
+  disableNameSuffixHash: true
+configMapGenerator:
+  - name: agent-qwen-bot
+    files:
+      - agent.yaml
+      - instructions.md
+    options:
+      labels:
+        kiseno/agent: qwen-bot
