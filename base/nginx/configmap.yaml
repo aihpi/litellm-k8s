@@ -19,6 +19,19 @@ data:
         ''      close;
       }
 
+      # Agents come only from the agent-skillbook repository; the
+      # kiseno-agent-runner registers them in LiteLLM over the Service, not
+      # through this nginx. So every write on /v1/agents from outside the
+      # cluster is refused here. GET and HEAD stay open, because the UI lists
+      # agents, and /a2a/... is untouched, because that is how agents are
+      # called. LiteLLM already limits these routes to admins; this is a second
+      # barrier. For an exception, port-forward to litellm-service.
+      # $uri is the normalised path, so //, ../ and %-encoding do not get past.
+      map "$request_method:$uri" $agent_write_blocked {
+        default 0;
+        "~^(?!(GET|HEAD):)[^:]*:/v1/agents(/|$)" 1;
+      }
+
       upstream litellm_backend {
         server litellm-service.litellm.svc.cluster.local:4000;
       }
@@ -31,6 +44,15 @@ data:
 
         location = /metrics { return 403; }
         location ^~ /metrics/ { return 403; }
+
+        # MCP servers are added by admins only. This route lets any user submit
+        # one for review, which nobody outside the cluster needs.
+        location = /v1/mcp/server/register { return 403; }
+
+        # See the map $agent_write_blocked above.
+        if ($agent_write_blocked) {
+            return 403 "Agents are managed in the agent-skillbook repository.\n";
+        }
 
         # OpenTela worker tunnel (prod only). The location's path prefix is the
         # tunnel passcode, so it is NOT written here: the nginx image's envsubst
