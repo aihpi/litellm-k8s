@@ -65,14 +65,14 @@ replicas:
     count: 0
 
 images:
-  # KISENO agent runner, built from aihpi/tool-litellm@eca7cd8. Pinned by hand;
+  # KISENO agent runner, built from aihpi/tool-litellm@b906922. Pinned by hand;
   # the pin bot only rewrites the tool-litellm entry at the end of this list.
   - name: ghcr.io/aihpi/tool-kiseno-agent-runner
-    digest: sha256:db338e2b6b5d8c588956ce27dda91948282343e746d7e1b2bc07dce211423b87
-  # Qwen-Bot, built from aihpi/tool-litellm@fde4ff3. Pinned by hand like the
+    digest: sha256:173f13c6c6f73e7e3f1820685af0183600a87c0939c6b96395c37557ce7576b9
+  # Qwen-Bot, built from aihpi/tool-litellm@b906922. Pinned by hand like the
   # runner.
   - name: ghcr.io/aihpi/tool-kiseno-slack-bot
-    digest: sha256:b3403039c5b573e8f0367e8d9fe3a63b03583da73c276483ad0f46f6b23659f0
+    digest: sha256:32e226977e7fe5a3955415a24c3c114ab0d9047a71cec1efb973494153088759
   # Used in prod only by the kisz-key-expiry CronJob. Built from
   # aihpi/tool-litellm@bb97c3a (exempt teams, two-extension rule).
   # Pinned by hand; the pin bot only rewrites the tool-litellm entry below.
