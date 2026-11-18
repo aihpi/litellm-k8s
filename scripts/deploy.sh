@@ -46,7 +46,7 @@ kubectl apply -k models/
 # A separate kustomize root, because the overlay itself forces its own
 # namespace on everything. In prod the Argo CD Application `kiseno-agents`
 # syncs the same folder. The agent definitions are not applied here: they come
-# from the GitLab repository kisz/agent-skillbook through the Argo CD
+# from the GitLab repository kisz/arbeitsagentur/agent-skillbook through the Argo CD
 # Application `agent-skillbook` (argocd/agent-skillbook.yaml).
 if [ -d "overlays/${ENV}/kiseno-agents" ]; then
   kubectl apply -k "overlays/${ENV}/kiseno-agents/"
