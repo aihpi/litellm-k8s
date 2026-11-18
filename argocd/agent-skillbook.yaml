@@ -1,6 +1,6 @@
 # Argo CD project and application for the KISENO agent and skill definitions.
 #
-# The definitions live in the private GitLab repository kisz/agent-skillbook.
+# The definitions live in the private GitLab repository kisz/arbeitsagentur/agent-skillbook.
 # A merge into its main branch goes live on its own: Argo CD builds the
 # repository's kustomization into ConfigMaps in namespace kiseno-agents, and
 # the agent runner and the Slack bot read them from there.
@@ -26,7 +26,7 @@ metadata:
 spec:
   description: KISENO agent and skill definitions from GitLab, ConfigMaps in kiseno-agents only
   sourceRepos:
-    - https://gitlab.hpi.de/kisz/agent-skillbook.git
+    - https://gitlab.hpi.de/kisz/arbeitsagentur/agent-skillbook.git
   destinations:
     - server: https://kubernetes.default.svc
       namespace: kiseno-agents
@@ -45,7 +45,7 @@ metadata:
 spec:
   project: agent-skillbook
   source:
-    repoURL: https://gitlab.hpi.de/kisz/agent-skillbook.git
+    repoURL: https://gitlab.hpi.de/kisz/arbeitsagentur/agent-skillbook.git
     targetRevision: main
     path: .
   destination:
