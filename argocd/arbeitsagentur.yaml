@@ -1,0 +1,69 @@
+# Argo CD parent application (app of apps) for the Arbeitsagentur: the Argo CD
+# applications behind the KISENO agents.
+#
+# It tracks the folder argocd/arbeitsagentur/ in this repository. Every file
+# there defines one child Application together with its own AppProject:
+#
+# - agent-skillbook.yaml: agent and skill definitions, ConfigMaps in
+#   kiseno-agents.
+#
+# The children keep their own projects on purpose. Each project limits what
+# its GitLab repository can create, and those limits differ per repository.
+# Do not merge them into one project.
+#
+# Bootstrap, once and by hand:
+#
+#   kubectl apply -f argocd/arbeitsagentur.yaml
+#
+# After that, a change under argocd/arbeitsagentur/ that is merged into main
+# reaches the cluster on its own within minutes. This differs from
+# litellm-prod-app, which is synced by hand.
+#
+# Nothing here deletes a child. Sync runs without prune, the children carry
+# Prune=false and Delete=false, and this application has no resources
+# finalizer, so deleting it leaves the children in place. There is no selfHeal
+# either: a manual edit of a child in the cluster stays until the next change
+# in Git or a manual sync.
+#
+# What this project permits is narrow in kind but not in power: an Application
+# or AppProject in namespace argocd can deploy anything its own project
+# allows. Whoever can merge into main of this repository decides that, and
+# because sync is automatic, no second person has to sync first.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: arbeitsagentur
+  namespace: argocd
+spec:
+  description: Parent of the Arbeitsagentur applications, Application and AppProject objects in argocd only
+  sourceRepos:
+    - https://github.com/aihpi/litellm-k8s.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: argocd
+  # Empty: no cluster-scoped resources.
+  clusterResourceWhitelist: []
+  namespaceResourceWhitelist:
+    - group: argoproj.io
+      kind: Application
+    - group: argoproj.io
+      kind: AppProject
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: arbeitsagentur
+  namespace: argocd
+spec:
+  project: arbeitsagentur
+  source:
+    repoURL: https://github.com/aihpi/litellm-k8s.git
+    targetRevision: main
+    path: argocd/arbeitsagentur
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: false

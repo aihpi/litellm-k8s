@@ -13,7 +13,7 @@
 #
 # The agent and skill definitions themselves are not in this repository. They
 # live in the private GitLab repository kisz/arbeitsagentur/agent-skillbook, and the Argo CD
-# Application `agent-skillbook` (../../../argocd/agent-skillbook.yaml) syncs
+# Application `agent-skillbook` (../../../argocd/arbeitsagentur/agent-skillbook.yaml) syncs
 # them into this namespace as ConfigMaps.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
