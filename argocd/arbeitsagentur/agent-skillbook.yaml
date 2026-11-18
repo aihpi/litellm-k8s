@@ -5,9 +5,13 @@
 # repository's kustomization into ConfigMaps in namespace kiseno-agents, and
 # the agent runner and the Slack bot read them from there.
 #
-# Applications are not managed from this repository. Apply this file by hand:
+# This file is synced by the parent Application `arbeitsagentur`
+# (../arbeitsagentur.yaml), which tracks this folder. Do not apply it by hand.
 #
-#   kubectl apply -f argocd/agent-skillbook.yaml
+# Both objects carry Prune=false and Delete=false: if this file is removed or
+# renamed, or the parent is deleted, Argo CD leaves the project and the
+# Application in the cluster. The Application has no resources finalizer
+# either, so even deleting it by hand leaves the ConfigMaps in kiseno-agents.
 #
 # Needs, already in place:
 # - a repository credential for the URL below in Argo CD (read-only deploy
@@ -23,6 +27,10 @@ kind: AppProject
 metadata:
   name: agent-skillbook
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+    # The project before the Application that uses it.
+    argocd.argoproj.io/sync-wave: "-1"
 spec:
   description: KISENO agent and skill definitions from GitLab, ConfigMaps in kiseno-agents only
   sourceRepos:
@@ -42,6 +50,8 @@ kind: Application
 metadata:
   name: agent-skillbook
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
 spec:
   project: agent-skillbook
   source:
