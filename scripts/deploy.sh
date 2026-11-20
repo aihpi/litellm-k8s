@@ -52,6 +52,15 @@ if [ -d "overlays/${ENV}/kiseno-agents" ]; then
   kubectl apply -k "overlays/${ENV}/kiseno-agents/"
 fi
 
+# Namespace kiseno-tools with its NetworkPolicies and sealed Secrets, for the
+# internal MCP servers. In prod the Argo CD Application `kiseno-tools` syncs
+# the same folder. The servers are not applied here: they come from the GitLab
+# repository kisz/arbeitsagentur/agent-toolbox through the Argo CD Application
+# `agent-toolbox` (argocd/arbeitsagentur/agent-toolbox.yaml).
+if [ -d "overlays/${ENV}/kiseno-tools" ]; then
+  kubectl apply -k "overlays/${ENV}/kiseno-tools/"
+fi
+
 if [ -d "overlays/${ENV}" ]; then
   kubectl apply -k "overlays/${ENV}/"
 fi
