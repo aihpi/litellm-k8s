@@ -6,6 +6,10 @@
 #
 # - agent-skillbook.yaml: agent and skill definitions, ConfigMaps in
 #   kiseno-agents.
+# - kiseno-tools.yaml: the namespace kiseno-tools with its NetworkPolicies and
+#   sealed Secrets, from this repository.
+# - agent-toolbox.yaml: the internal MCP servers, Deployments and Services in
+#   kiseno-tools.
 #
 # The children keep their own projects on purpose. Each project limits what
 # its GitLab repository can create, and those limits differ per repository.
