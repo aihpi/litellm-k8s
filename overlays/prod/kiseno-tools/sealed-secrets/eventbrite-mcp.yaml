@@ -1,0 +1,13 @@
+---
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: eventbrite-mcp-secret
+  namespace: kiseno-tools
+spec:
+  encryptedData:
+    EVENTBRITE_TOKEN: AgCtQeUHXgtaqcZdjtM2v5870ZzRl0VAhA5xqTnfKIQTglQg4NON+Vy2FsBbxBP151Wa1dAiv2q8D8pgpBdxw8EnOcASaC2G5FH61tvc13sC2GUGGe0Ex0HPoSHPtcZEjOVTWbBipNV9PtuyMW+4NnyXE70azsqcOxzDln4ssbdv3J/ECqVSMKe6JlqqPDvPNA00HPsxpepfeBmOhe8NdyRPYwbMZzWy0Ha9T21J9+Ow6B/aloXj1Or7d//nlyulNWHKzB5AfxEsTjwfHn+/qGzQUgruhNQpdJ61KHMqsuTKSh/Ku3NwuF52NNOdokcNxcrDsXWx4LDS0qQ3XgVJ+nDRrlnOJZHDRWSjj03YaBMzKFkY3ilmvrfd4n7FhcNer4+/8hIEkQZnPJgHFjiDJEdCCzG+JCOXar6J8M4YcHQ5QJPOBGT9znw61WaMaelHQ+6/oqrPtGCJxIOgJgkKGfUjWDOu8YouEPE7RRBycnj7fPqyv/mF7YMZD0YdbiCtrt3vwgQ9PuajqhGzz8Qi+RNy08D+0Pf7+u71DD6i8KQErgAdccRBd1NuG9FzQejXj5ihgiENnWyPfc0ECNYdjok756/2W9jNdid5+sAiRKXcyhM5dJim42hGd6mCYEhUrbxbGQ3dQxZwpH/cQQf+U2hn0iRLpgjKkdGCShBAJ6dBdfaQNMTAGF4UGC3sLKnwAoZ4fke1Wkqis0im4OKWA5I0wXsp7w==
+  template:
+    metadata:
+      name: eventbrite-mcp-secret
+      namespace: kiseno-tools
