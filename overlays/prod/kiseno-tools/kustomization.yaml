@@ -23,5 +23,5 @@ resources:
   - networkpolicy.yaml
   # Sealed on the deploy host, see sealed-secrets/README.md. Until both files
   # exist, the pods of agent-toolbox cannot start.
-  # - sealed-secrets/agent-toolbox-registry.yaml
+  - sealed-secrets/agent-toolbox-registry.yaml
   # - sealed-secrets/eventbrite-mcp.yaml

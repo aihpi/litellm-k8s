@@ -1,0 +1,14 @@
+---
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: agent-toolbox-registry
+  namespace: kiseno-tools
+spec:
+  encryptedData:
+    .dockerconfigjson: AgCHaQUiHAuE2jXa5OrUJfcTCbgHMFahBnPlH9LpB4x/Nb0R4uXJ/lgPtgJ5x/5sf/nPGTCFO6n1+8u9aLfv9WKFMnRDM3uerBlToBedIpOMSHlKxHQby8Fihy9rWpofsKy08ZjF0iPDoKCAASxoaDeH7b3ru19giD3CZ6sd4L4ckwEZQDTSKF/T7fBiWVAOkABWk/ivPmcWoCByBM6y6wibc5chEFqbhURuRn+IQZ+YyeOgJ2esZsnbB9YQYZYPm0plOxY9HtMI0pYNnwTAGUdYsNoPDYXKuxZ3VwZS6BK/Oq2vo7Y5eU1V5OlB9PGvUh7GkQjjz9NYtV4lvm3jU0EVrmISzQPzjqDVlecKMKj2TZPum4GSuThCneeFIo1Rwbyn8x6e1RL0u1i+FdgrRrqNrR3k7VB8peeHY/ab2XErdmkZnloEKzEulyKc6alY0LgUxMCCZGxcpBanc0OhlJ8a36rFik3Jk/eQWv2V2lNYUrGOSzLDA6DnPqdxepzxOssCIPXm5SL6OMHitZDQVL8ZgmrO/2UbXMtgdOEE009GiyGwVsrlkzb8T5iq91QhBPPrpszvvFuS9bihsyXbaSm4GckDTx1mH8yc6EqpWfc0p5YAjka9tmlOsJnl7Zbq62Uh92/Hn98vZHpuOjBb9M70Ba3Eef4qb4Xl3Q4wQwir0FgvWY07CtMLY0A/xpZhqx/jch4eB/BxEVhvoETAOTlnOMBlFg8ZNLs7ne195+IKivMrDy/8eJd5A7W3d3fYTr2czz20qG01Z/glnATBBmd61rA9eRbXtJXV38BKQ7T7F/m1nU0htKe6Ivb6EZ4ixuXS/pZZ3rK3E/Qi2GiB/eiJuroI1pLBpa/8g+JjUZgO9f6ua6k71HICNDU8xbYKGYML2Pp7R2gYv7M9WNRU4VwQuSqfnNqOJRN80Jm9ePDVqO02qx/8vGFSEhScDA4IXPo=
+  template:
+    metadata:
+      name: agent-toolbox-registry
+      namespace: kiseno-tools
+    type: kubernetes.io/dockerconfigjson
