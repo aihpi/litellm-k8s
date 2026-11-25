@@ -1,0 +1,27 @@
+# Namespace kiseno-tools: where the internal MCP servers of the KISENO agents
+# run (eventbrite, arbeitsagentur-toolbox). This folder holds what surrounds
+# the servers: the Namespace, the NetworkPolicies and the sealed Secrets.
+#
+# The servers themselves are not in this repository. Their Deployments and
+# Services live in the private GitLab repository
+# kisz/arbeitsagentur/agent-toolbox, and the Argo CD Application
+# `agent-toolbox` (../../../argocd/arbeitsagentur/agent-toolbox.yaml) syncs
+# them into this namespace.
+#
+# This is its own kustomize root, like ../kiseno-agents: the prod overlay sets
+# `namespace: litellm` on everything it builds.
+#
+# How it reaches the cluster: the Argo CD Application `kiseno-tools`
+# (../../../argocd/arbeitsagentur/kiseno-tools.yaml) tracks this path at main,
+# with manual sync. scripts/deploy.sh applies the same folder with
+# `kubectl apply -k`, for a cluster without that Application.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - namespace.yaml
+  - networkpolicy.yaml
+  # Sealed on the deploy host, see sealed-secrets/README.md. Until both files
+  # exist, the pods of agent-toolbox cannot start.
+  - sealed-secrets/agent-toolbox-registry.yaml
+  # - sealed-secrets/eventbrite-mcp.yaml

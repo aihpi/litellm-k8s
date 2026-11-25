@@ -28,6 +28,7 @@ jobs:
           ./kustomize build overlays/staging
           ./kustomize build overlays/prod
           ./kustomize build overlays/prod/kiseno-agents
+          ./kustomize build overlays/prod/kiseno-tools
 
       # Archive-safety guards for lora-manager uploads. Stdlib only (tarfile +
       # app.validation), so there is nothing to install.

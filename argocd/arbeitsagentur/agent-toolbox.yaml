@@ -1,0 +1,82 @@
+# Argo CD project and application for the internal MCP servers of the KISENO
+# agents (eventbrite, arbeitsagentur-toolbox).
+#
+# The servers live in the private GitLab repository
+# kisz/arbeitsagentur/agent-toolbox. Argo CD builds the kustomization at its
+# root into Deployments and Services in namespace kiseno-tools. The images are
+# pinned by digest there, so a merged pin is the deployment: it goes live on
+# its own within minutes.
+#
+# This file is synced by the parent Application `arbeitsagentur`
+# (../arbeitsagentur.yaml). Do not apply it by hand.
+#
+# Both objects carry Prune=false and Delete=false, see agent-skillbook.yaml.
+# The Application has no resources finalizer, so deleting it by hand leaves
+# the servers running.
+#
+# Needs:
+# - a repository credential for the URL below in Argo CD (read-only deploy
+#   token), unless an existing credential template covers it;
+# - the namespace kiseno-tools with its NetworkPolicies and Secrets, owned by
+#   the Application `kiseno-tools` (kiseno-tools.yaml). Sync that one first;
+# - after the first sync, an admin registers each server in LiteLLM (see the
+#   README of agent-toolbox).
+#
+# The project is the guard: whatever a merge request in the GitLab repository
+# contains, Argo CD can only create Deployments and Services, and only in
+# kiseno-tools. No Secret, no ConfigMap, no RBAC, no NetworkPolicy (those
+# would add to the ones from this repository and could open the namespace),
+# no cluster-scoped resource, no other namespace.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: agent-toolbox
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  description: Internal MCP servers of the KISENO agents from GitLab, Deployments and Services in kiseno-tools only
+  sourceRepos:
+    - https://gitlab.hpi.de/kisz/arbeitsagentur/agent-toolbox.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: kiseno-tools
+  clusterResourceWhitelist: []
+  namespaceResourceWhitelist:
+    - group: apps
+      kind: Deployment
+    - group: ""
+      kind: Service
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: agent-toolbox
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+spec:
+  project: agent-toolbox
+  source:
+    repoURL: https://gitlab.hpi.de/kisz/arbeitsagentur/agent-toolbox.git
+    targetRevision: main
+    path: .
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kiseno-tools
+  syncPolicy:
+    # Automatic: a merged image pin goes live within minutes. prune removes
+    # the Deployment and Service of a deleted server; selfHeal reverts manual
+    # edits in the cluster.
+    automated:
+      prune: true
+      selfHeal: true
+    # The first sync can come before the namespace exists; try again for a
+    # while instead of giving up.
+    retry:
+      limit: 10
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 10m

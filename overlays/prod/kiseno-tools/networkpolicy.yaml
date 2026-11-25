@@ -1,0 +1,51 @@
+# Who may talk to the MCP servers in kiseno-tools, and what they may reach.
+#
+# These policies live here and not in the agent-toolbox repository on purpose.
+# NetworkPolicies add up: a second policy in the namespace could open what
+# these close. The Argo CD project of agent-toolbox therefore cannot create
+# NetworkPolicies at all.
+#
+# Needs a CNI that enforces NetworkPolicy. Without one these objects are
+# accepted and have no effect. The kubelet's probes come from the node and are
+# not affected.
+#
+# Inbound, every pod in the namespace: only the LiteLLM proxy pods, on the MCP
+# port. Agents never call a server directly; the agent runner goes through
+# LiteLLM, which checks the agent's key and its MCP access.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: only-litellm-inbound
+  namespace: kiseno-tools
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: litellm
+          podSelector:
+            matchLabels:
+              app: litellm
+      ports:
+        - protocol: TCP
+          port: 8080
+---
+# Outbound, the shared toolbox server: nothing. It holds plain Python functions
+# that call no other system, and this makes the cluster hold it to that. A
+# server that has to call out, such as eventbrite, is not selected here and
+# keeps its outbound traffic.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: arbeitsagentur-toolbox-no-outbound
+  namespace: kiseno-tools
+spec:
+  podSelector:
+    matchLabels:
+      app: arbeitsagentur-toolbox
+  policyTypes:
+    - Egress
+  egress: []

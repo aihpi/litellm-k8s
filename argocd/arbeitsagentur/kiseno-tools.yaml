@@ -1,0 +1,57 @@
+# Argo CD project and application for the namespace kiseno-tools and what
+# surrounds the MCP servers in it: the Namespace, the NetworkPolicies and the
+# sealed Secrets, from overlays/prod/kiseno-tools/ in this repository.
+#
+# The servers themselves come from another repository through the Application
+# `agent-toolbox` (agent-toolbox.yaml). The split is deliberate: who may reach
+# the servers and which Secrets exist is decided here, not in the repository
+# that holds the server code.
+#
+# This file is synced by the parent Application `arbeitsagentur`
+# (../arbeitsagentur.yaml). Do not apply it by hand.
+#
+# Sync of this Application is manual, like litellm-prod-app: a merge into main
+# changes nothing in kiseno-tools until someone syncs.
+#
+# Both objects carry Prune=false and Delete=false, see agent-skillbook.yaml.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: kiseno-tools
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  description: Namespace kiseno-tools with its NetworkPolicies and sealed Secrets, from litellm-k8s
+  sourceRepos:
+    - https://github.com/aihpi/litellm-k8s.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: kiseno-tools
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+  namespaceResourceWhitelist:
+    - group: networking.k8s.io
+      kind: NetworkPolicy
+    - group: bitnami.com
+      kind: SealedSecret
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kiseno-tools
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+spec:
+  project: kiseno-tools
+  source:
+    repoURL: https://github.com/aihpi/litellm-k8s.git
+    targetRevision: main
+    path: overlays/prod/kiseno-tools
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kiseno-tools
+  # No syncPolicy: manual sync.
